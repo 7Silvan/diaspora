@@ -8,11 +8,11 @@ app.views.Aspect = app.views.Base.extend({
   className: 'hoverable',
 
   events: {
-    'click .icons-check_yes_ok+a': 'toggleAspect'
+    "click .aspect-item": "toggleAspect"
   },
 
   toggleAspect: function(evt) {
-    if (evt) { evt.preventDefault(); };
+    if (evt) { evt.preventDefault(); }
     this.model.toggleSelected();
 
     app.router.aspects_stream();
@@ -21,8 +21,7 @@ app.views.Aspect = app.views.Base.extend({
   presenter : function() {
     return _.extend(this.defaultPresenter(), {
       aspect : this.model
-    })
+    });
   }
 });
 // @license-end
-

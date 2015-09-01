@@ -149,21 +149,6 @@ describe Post, :type => :model do
         end
 
       end
-
-      # @posts[0] is the newest, @posts[5] is the oldest
-      describe ".newer" do
-        it 'returns the next post in the array' do
-          expect(@posts[3].created_at).to be < @posts[2].created_at #post 2 is newer
-          expect(Post.newer(@posts[3]).created_at.to_s).to eq(@posts[2].created_at.to_s) #its the newer post, not the newest
-        end
-      end
-
-      describe ".older" do
-        it 'returns the previous post in the array' do
-          expect(Post.older(@posts[3]).created_at.to_s).to eq(@posts[4].created_at.to_s) #its the older post, not the oldest
-          expect(@posts[3].created_at).to be > @posts[4].created_at #post 4 is older
-        end
-      end
     end
   end
 
@@ -244,18 +229,33 @@ describe Post, :type => :model do
   end
 
   describe "#receive" do
-    it 'returns false if the post does not verify' do
-      @post = FactoryGirl.create(:status_message, :author => bob.person)
-      expect(@post).to receive(:verify_persisted_shareable).and_return(false)
-      expect(@post.receive(bob, eve.person)).to eq(false)
+    it "does not receive if the post does not verify" do
+      @post = FactoryGirl.create(:status_message, author: bob.person)
+      @known_post = FactoryGirl.create(:status_message, author: eve.person)
+      allow(@post).to receive(:persisted_shareable).and_return(@known_post)
+      expect(@post).not_to receive(:receive_persisted)
+      @post.receive(bob, eve.person)
+    end
+
+    it "receives an update if the post is known" do
+      @post = FactoryGirl.create(:status_message, author: bob.person)
+      expect(@post).to receive(:receive_persisted)
+      @post.receive(bob, eve.person)
+    end
+
+    it "receives a new post if the post is unknown" do
+      @post = FactoryGirl.create(:status_message, author: bob.person)
+      allow(@post).to receive(:persisted_shareable).and_return(nil)
+      expect(@post).to receive(:receive_non_persisted)
+      @post.receive(bob, eve.person)
     end
   end
 
   describe "#receive_persisted" do
     before do
-      @post = FactoryGirl.create(:status_message, :author => bob.person)
+      @post = FactoryGirl.create(:status_message, author: bob.person)
       @known_post = Post.new
-      allow(bob).to receive(:contact_for).with(eve.person).and_return(double(:receive_shareable => true))
+      allow(bob).to receive(:contact_for).with(eve.person).and_return(double(receive_shareable: true))
     end
 
     context "user knows about the post" do
@@ -263,16 +263,16 @@ describe Post, :type => :model do
         allow(bob).to receive(:find_visible_shareable_by_id).and_return(@known_post)
       end
 
-      it 'updates attributes only if mutable' do
+      it "updates attributes only if mutable" do
         allow(@known_post).to receive(:mutable?).and_return(true)
         expect(@known_post).to receive(:update_attributes)
         expect(@post.send(:receive_persisted, bob, eve.person, @known_post)).to eq(true)
       end
 
-      it 'returns false if trying to update a non-mutable object' do
+      it "does not update attributes if trying to update a non-mutable object" do
         allow(@known_post).to receive(:mutable?).and_return(false)
         expect(@known_post).not_to receive(:update_attributes)
-        expect(@post.send(:receive_persisted, bob, eve.person, @known_post)).to eq(false)
+        @post.send(:receive_persisted, bob, eve.person, @known_post)
       end
     end
 
@@ -286,8 +286,8 @@ describe Post, :type => :model do
         expect(@post.send(:receive_persisted, bob, eve.person, @known_post)).to eq(true)
       end
 
-      it 'notifies the user if they are mentioned' do
-        allow(bob).to receive(:contact_for).with(eve.person).and_return(double(:receive_shareable => true))
+      it "notifies the user if they are mentioned" do
+        allow(bob).to receive(:contact_for).with(eve.person).and_return(double(receive_shareable: true))
         expect(bob).to receive(:notify_if_mentioned).and_return(true)
 
         expect(@post.send(:receive_persisted, bob, eve.person, @known_post)).to eq(true)
@@ -295,30 +295,60 @@ describe Post, :type => :model do
     end
   end
 
-  describe '#receive_non_persisted' do
+  describe "#receive_non_persisted" do
     context "the user does not know about the post" do
       before do
-        @post = FactoryGirl.create(:status_message, :author => bob.person)
+        @post = FactoryGirl.create(:status_message, author: bob.person)
         allow(bob).to receive(:find_visible_shareable_by_id).and_return(nil)
         allow(bob).to receive(:notify_if_mentioned).and_return(true)
       end
 
       it "it receives the post from the contact of the author" do
-        expect(bob).to receive(:contact_for).with(eve.person).and_return(double(:receive_shareable => true))
+        expect(bob).to receive(:contact_for).with(eve.person).and_return(double(receive_shareable: true))
         expect(@post.send(:receive_non_persisted, bob, eve.person)).to eq(true)
       end
 
-      it 'notifies the user if they are mentioned' do
-        allow(bob).to receive(:contact_for).with(eve.person).and_return(double(:receive_shareable => true))
+      it "notifies the user if they are mentioned" do
+        allow(bob).to receive(:contact_for).with(eve.person).and_return(double(receive_shareable: true))
         expect(bob).to receive(:notify_if_mentioned).and_return(true)
 
         expect(@post.send(:receive_non_persisted, bob, eve.person)).to eq(true)
       end
 
-      it 'returns false if the post does not save' do
+      it "does not create shareable visibility if the post does not save" do
         allow(@post).to receive(:save).and_return(false)
-        expect(@post.send(:receive_non_persisted, bob, eve.person)).to eq(false)
+        expect(@post).not_to receive(:receive_shareable_visibility)
+        @post.send(:receive_non_persisted, bob, eve.person)
       end
+
+      it "retries if saving fails with RecordNotUnique error" do
+        allow(@post).to receive(:save).and_raise(ActiveRecord::RecordNotUnique.new("Duplicate entry ..."))
+        expect(bob).to receive(:contact_for).with(eve.person).and_return(double(receive_shareable: true))
+        expect(@post.send(:receive_non_persisted, bob, eve.person)).to eq(true)
+      end
+
+      it "retries if saving fails with RecordNotUnique error and raise again if no persisted shareable found" do
+        allow(@post).to receive(:save).and_raise(ActiveRecord::RecordNotUnique.new("Duplicate entry ..."))
+        allow(@post).to receive(:persisted_shareable).and_return(nil)
+        expect(bob).not_to receive(:contact_for).with(eve.person)
+        expect { @post.send(:receive_non_persisted, bob, eve.person) }.to raise_error(ActiveRecord::RecordNotUnique)
+      end
+    end
+  end
+
+  describe "#receive_public" do
+    it "saves the post if the post is unknown" do
+      @post = FactoryGirl.create(:status_message, author: bob.person)
+      allow(@post).to receive(:persisted_shareable).and_return(nil)
+      expect(@post).to receive(:save!)
+      @post.receive_public
+    end
+
+    it "does not update the post because not mutable" do
+      @post = FactoryGirl.create(:status_message, author: bob.person)
+      expect(@post).to receive(:update_existing_sharable).and_call_original
+      expect(@post).not_to receive(:update_attributes)
+      @post.receive_public
     end
   end
 
@@ -370,43 +400,55 @@ describe Post, :type => :model do
     end
   end
 
-  describe "#find_by_guid_or_id_with_user" do
+  describe "#find_public" do
     it "succeeds with an id" do
       post = FactoryGirl.create :status_message, public: true
-      expect(Post.find_by_guid_or_id_with_user(post.id)).to eq(post)
+      expect(Post.find_public post.id).to eq(post)
     end
 
     it "succeeds with an guid" do
       post = FactoryGirl.create :status_message, public: true
-      expect(Post.find_by_guid_or_id_with_user(post.guid)).to eq(post)
+      expect(Post.find_public post.guid).to eq(post)
+    end
+
+    it "raises ActiveRecord::RecordNotFound for a non-existing id without a user" do
+      allow(Post).to receive_messages where: double(includes: double(first: nil))
+      expect {
+        Post.find_public 123
+      }.to raise_error ActiveRecord::RecordNotFound
+    end
+
+    it "raises Diaspora::NonPublic for a private post without a user" do
+      post = FactoryGirl.create :status_message
+      expect {
+        Post.find_public post.id
+      }.to raise_error Diaspora::NonPublic
+    end
+  end
+
+  describe "#find_non_public_by_guid_or_id_with_user" do
+    it "succeeds with an id" do
+      post = FactoryGirl.create :status_message_in_aspect
+      expect(Post.find_non_public_by_guid_or_id_with_user(post.id, post.author.owner)).to eq(post)
+    end
+
+    it "succeeds with an guid" do
+      post = FactoryGirl.create :status_message_in_aspect
+      expect(Post.find_non_public_by_guid_or_id_with_user(post.guid, post.author.owner)).to eq(post)
     end
 
     it "looks up on the passed user object if it's non-nil" do
       post = FactoryGirl.create :status_message
       user = double
       expect(user).to receive(:find_visible_shareable_by_id).with(Post, post.id, key: :id).and_return(post)
-      Post.find_by_guid_or_id_with_user post.id, user
+      Post.find_non_public_by_guid_or_id_with_user(post.id, user)
     end
 
     it "raises ActiveRecord::RecordNotFound with a non-existing id and a user" do
       user = double(find_visible_shareable_by_id: nil)
       expect {
-        Post.find_by_guid_or_id_with_user 123, user
+        Post.find_non_public_by_guid_or_id_with_user(123, user)
       }.to raise_error ActiveRecord::RecordNotFound
-    end
-
-    it "raises Diaspora::NonPublic for a non-existing id without a user" do
-      allow(Post).to receive_messages where: double(includes: double(first: nil))
-      expect {
-        Post.find_by_guid_or_id_with_user 123
-      }.to raise_error Diaspora::NonPublic
-    end
-
-    it "raises Diaspora::NonPublic for a private post without a user" do
-      post = FactoryGirl.create :status_message
-      expect {
-        Post.find_by_guid_or_id_with_user post.id
-      }.to raise_error Diaspora::NonPublic
     end
   end
 end

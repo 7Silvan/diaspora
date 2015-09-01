@@ -28,13 +28,9 @@ app.views.InfScroll = app.views.Base.extend({
     this.prependedPosts = document.createDocumentFragment();
   },
 
-  postRenderTemplate : function() {
-    if(this.stream.isFetching()) { this.showLoader() }
-  },
-
   createPostView : function(post){
     var postView = new this.postClass({ model: post, stream: this.stream });
-    if (this.collection.at(0).id == post.id) {
+    if (this.collection.at(0).id === post.id) {
       // post is first in collection - insert view at top of the list
       this.postViews.unshift(postView);
     } else {
@@ -46,7 +42,7 @@ app.views.InfScroll = app.views.Base.extend({
   // called for every item inserted in this.collection
   addPostView : function(post) {
     var el = this.createPostView(post).render().el;
-    if (this.collection.at(0).id == post.id) {
+    if (this.collection.at(0).id === post.id) {
         this.prependedPosts.insertBefore(el, this.prependedPosts.firstChild);
     } else {
         this.appendedPosts.appendChild(el);
@@ -58,7 +54,7 @@ app.views.InfScroll = app.views.Base.extend({
   },
 
   renderTemplate : function(){
-    this.renderInitialPosts()
+    this.renderInitialPosts();
   },
 
   renderInitialPosts : function(){
@@ -66,7 +62,7 @@ app.views.InfScroll = app.views.Base.extend({
     var els = document.createDocumentFragment();
     this.stream.items.each(_.bind(function(post){
       els.appendChild(this.createPostView(post).render().el);
-    }, this))
+    }, this));
     this.$el.html(els);
   },
 
@@ -78,13 +74,14 @@ app.views.InfScroll = app.views.Base.extend({
   },
 
   showLoader: function(){
-    $("#paginate .loader").removeClass("hidden")
+    $("#paginate .loader").removeClass("hidden");
   },
 
   finishedAdding: function() {
     this.$el.prepend(this.prependedPosts);
     this.$el.append(this.appendedPosts);
     this._resetPostFragments();
+    this.postRenderTemplate();
   },
 
   finishedLoading: function() {
@@ -108,4 +105,3 @@ app.views.InfScroll = app.views.Base.extend({
   }
 });
 // @license-end
-

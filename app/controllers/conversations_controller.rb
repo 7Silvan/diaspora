@@ -2,43 +2,42 @@ class ConversationsController < ApplicationController
   before_action :authenticate_user!
 
   layout ->(c) { request.format == :mobile ? "application" : "with_header" }
-  use_bootstrap_for :index, :show, :new
-
   respond_to :html, :mobile, :json, :js
 
   def index
-    @conversations = current_user.conversations.paginate(
-      :page => params[:page], :per_page => 15)
+    @visibilities = ConversationVisibility.includes(:conversation)
+                                          .order("conversations.updated_at DESC")
+                                          .where(person_id: current_user.person_id)
+                                          .paginate(page: params[:page], per_page: 15)
 
-    @visibilities = current_user.conversation_visibilities.paginate(
-      :page => params[:page], :per_page => 15)
+    if params[:conversation_id]
+      @conversation = Conversation.joins(:conversation_visibilities)
+                                  .where(conversation_visibilities: {
+                                           person_id:       current_user.person_id,
+                                           conversation_id: params[:conversation_id]
+                                         }).first
 
-    @conversation = Conversation.joins(:conversation_visibilities).where(
-      :conversation_visibilities => {:person_id => current_user.person_id, :conversation_id => params[:conversation_id]}).first
-
-    @unread_counts = {}
-    @visibilities.each { |v| @unread_counts[v.conversation_id] = v.unread }
-
-    @first_unread_message_id = @conversation.try(:first_unread_message, current_user).try(:id)
-
-    @authors = {}
-    @conversations.each { |c| @authors[c.id] = c.last_author }
-
-    @ordered_participants = {}
-    @conversations.each { |c| @ordered_participants[c.id] = (c.messages.map{|m| m.author}.reverse + c.participants).uniq }
+      if @conversation
+        @first_unread_message_id = @conversation.first_unread_message(current_user).try(:id)
+        @conversation.set_read(current_user)
+      end
+    end
 
     gon.contacts = contacts_data
 
     respond_with do |format|
       format.html
-      format.json { render :json => @conversations, :status => 200 }
+      format.json { render json: @visibilities.map(&:conversation), status: 200 }
     end
   end
 
   def create
+    contact_ids = params[:contact_ids]
+
     # Can't split nil
-    if params[:contact_ids]
-      person_ids = current_user.contacts.where(id: params[:contact_ids].split(',')).pluck(:person_id)
+    if contact_ids
+      contact_ids = contact_ids.split(',') if contact_ids.is_a? String
+      person_ids = current_user.contacts.where(id: contact_ids).pluck(:person_id)
     end
 
     opts = params.require(:conversation).permit(:subject)
@@ -65,21 +64,21 @@ class ConversationsController < ApplicationController
   end
 
   def show
-    if @conversation = current_user.conversations.where(id: params[:id]).first
-
-      @first_unread_message_id = @conversation.first_unread_message(current_user).try(:id)
-      if @visibility = ConversationVisibility.where(:conversation_id => params[:id], :person_id => current_user.person.id).first
-        @visibility.unread = 0
-        @visibility.save
+    respond_to do |format|
+      format.html do
+        redirect_to conversations_path(:conversation_id => params[:id])
+        return
       end
 
-      respond_to do |format|
-        format.html { redirect_to conversations_path(:conversation_id => @conversation.id) }
+      if @conversation = current_user.conversations.where(id: params[:id]).first
+        @first_unread_message_id = @conversation.first_unread_message(current_user).try(:id)
+        @conversation.set_read(current_user)
+
         format.js
         format.json { render :json => @conversation, :status => 200 }
+      else
+        redirect_to conversations_path
       end
-    else
-      redirect_to conversations_path
     end
   end
 

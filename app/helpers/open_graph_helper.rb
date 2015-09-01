@@ -50,14 +50,20 @@ module OpenGraphHelper
   end
 
   def og_page_post_tags(post)
-    [
-      *og_common_tags,
-      og_type("#{og_namespace}:frame"),
-      og_title(post_page_title(post, :length => 140)),
-      og_url(post_url(post)),
-      og_image(post),
-      og_description(post.message.plain_text_without_markdown truncate: 1000)
-    ].join("\n").html_safe
+    tags = og_common_tags
+
+    if post.message
+      tags.concat [
+        *tags,
+        og_type("#{og_namespace}:frame"),
+        og_title(post_page_title(post, :length => 140)),
+        og_url(post_url(post)),
+        og_image(post),
+        og_description(post.message.plain_text_without_markdown truncate: 1000)
+      ]
+    end
+
+    tags.join("\n").html_safe
   end
 
   def og_prefix
@@ -89,10 +95,10 @@ module OpenGraphHelper
 
   # This method compensates for hosting assets off of s3
   def default_image_url
-    if image_path('asterisk.png').include?("http")
-      image_path('asterisk.png')
+    if image_path("branding/logos/asterisk.png").include?("http")
+      image_path("branding/logos/asterisk.png")
     else
-      "#{root_url.chop}#{image_path('asterisk.png')}"
+      "#{root_url.chop}#{image_path('branding/logos/asterisk.png')}"
     end
   end
 end

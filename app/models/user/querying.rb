@@ -68,7 +68,7 @@ module User::Querying
   end
 
   def construct_public_followings_sql(opts)
-    Rails.logger.debug("[EVIL-QUERY] user.construct_public_followings_sql")
+    logger.debug "[EVIL-QUERY] user.construct_public_followings_sql"
 
     # For PostgreSQL and MySQL/MariaDB we use a different query
     # see issue: https://github.com/diaspora/diaspora/issues/5014
@@ -165,6 +165,9 @@ module User::Querying
     }
     defaults[:type] = Stream::Base::TYPES_OF_POST_IN_STREAM if klass == Post
     opts = defaults.merge(opts)
+    if opts[:limit] == :all
+      opts.delete(:limit)
+    end
 
     opts[:order_field] = opts[:order].split.first.to_sym
     opts[:order_with_table] = klass.table_name + '.' + opts[:order]

@@ -9,21 +9,21 @@ Feature: posting from the main page
         | username   |
         | bob        |
         | alice      |
-      And I sign in as "bob@bob.bob"
       And a user with username "bob" is connected with "alice"
-      Given I have following aspects:
+      And I sign in as "bob@bob.bob"
+      And I have following aspects:
         | PostingTo            |
         | NotPostingThingsHere |
       And I have user with username "alice" in an aspect called "PostingTo"
       And I have user with username "alice" in an aspect called "NotPostingThingsHere"
-      And I am on the home page
+      And I go to the home page
 
     Scenario: expanding the publisher
       Given ".markdownIndications" is hidden
       And ".options_and_submit" is hidden
       When I expand the publisher
-      Then I should see "You can use Markdown to format your post" within "#publisher-images"
-      Then I should see "All Aspects" within ".options_and_submit"
+      Then I should see "You can use Markdown to format your post" within ".markdownIndications"
+      Then I should see "All aspects" within ".options_and_submit"
       Then I should see "Preview" within ".options_and_submit"
 
     Scenario: post a text-only message to all aspects
@@ -52,7 +52,7 @@ Feature: posting from the main page
     Scenario: posting a message appends it to the top of the stream
       When I click the publisher and post "sup dog"
       And I click the publisher and post "hello there"
-      Then I should see "hello there" as the first post in my stream
+      Then "hello there" should be post 1
 
     Scenario: post a text-only message to just one aspect
       When I select only "PostingTo" aspect
@@ -64,7 +64,7 @@ Feature: posting from the main page
       When I am on the aspects page
       And I select all aspects
       And I select only "PostingTo" aspect
-      Then I should see "I am eating a yogurt"
+      Then "I am eating a yogurt" should be post 1
 
       When I am on the aspects page
       And I select all aspects
@@ -126,7 +126,6 @@ Feature: posting from the main page
       And the publisher should be expanded
       And I close the publisher
 
-    @wip
     Scenario: hide a contact's post
       Given I expand the publisher
       When I write the status message "Here is a post for you to hide"
@@ -137,8 +136,7 @@ Feature: posting from the main page
       And I am on "bob@bob.bob"'s page
 
       And I hover over the ".stream_element"
-      And I click to delete the first post
-      And I confirm the alert
+      And I click to hide the first post
       And I go to "bob@bob.bob"'s page
       Then I should not see "Here is a post for you to hide"
       When I am on the aspects page
@@ -163,7 +161,7 @@ Feature: posting from the main page
 
       And I am on the aspects page
       And I select only "PostingTo" aspect
-      Then I should see "I am eating a yogurt"
+      Then "I am eating a yogurt" should be post 1
       When I am on the aspects page
       And I select all aspects
       And I select only "NotPostingThingsHere" aspect

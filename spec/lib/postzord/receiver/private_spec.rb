@@ -13,26 +13,24 @@ describe Postzord::Receiver::Private do
 
   describe '.initialize' do
     it 'valid for local' do
-      expect(Webfinger).not_to receive(:new)
+      expect(Person).not_to receive(:find_or_fetch_by_identifier)
       expect(Salmon::EncryptedSlap).not_to receive(:from_xml)
 
       zord = Postzord::Receiver::Private.new(bob, :person => alice.person, :object => @alices_post)
       expect(zord.instance_variable_get(:@user)).not_to be_nil
-      expect(zord.instance_variable_get(:@sender)).not_to be_nil
+      expect(zord.instance_variable_get(:@author)).not_to be_nil
       expect(zord.instance_variable_get(:@object)).not_to be_nil
     end
 
     it 'valid for remote' do
       salmon_double = double()
-      web_double = double()
-      expect(web_double).to receive(:fetch).and_return true
       expect(salmon_double).to receive(:author_id).and_return(true)
       expect(Salmon::EncryptedSlap).to receive(:from_xml).with(@salmon_xml, bob).and_return(salmon_double)
-      expect(Webfinger).to receive(:new).and_return(web_double)
+      expect(Person).to receive(:find_or_fetch_by_identifier).and_return(true)
 
       zord = Postzord::Receiver::Private.new(bob, :salmon_xml => @salmon_xml)
       expect(zord.instance_variable_get(:@user)).not_to be_nil
-      expect(zord.instance_variable_get(:@sender)).not_to be_nil
+      expect(zord.instance_variable_get(:@author)).not_to be_nil
       expect(zord.instance_variable_get(:@salmon_xml)).not_to be_nil
     end
   end
@@ -43,22 +41,17 @@ describe Postzord::Receiver::Private do
       @salmon = @zord.instance_variable_get(:@salmon)
     end
 
-    context 'returns false' do
-      it 'if the salmon author does not exist' do
-        @zord.instance_variable_set(:@sender, nil)
-        expect(@zord.receive!).to eq(false)
-      end
-
-      it 'if the author does not match the signature' do
-        @zord.instance_variable_set(:@sender, FactoryGirl.create(:person))
-        expect(@zord.receive!).to eq(false)
-      end
-    end
-
-    context 'returns the sent object' do
-      it 'returns the received object on success' do
+    context "does not parse and receive" do
+      it "if the salmon author does not exist" do
+        @zord.instance_variable_set(:@author, nil)
+        expect(@zord).not_to receive(:parse_and_receive)
         @zord.receive!
-        expect(@zord.instance_variable_get(:@object)).to respond_to(:to_diaspora_xml)
+      end
+
+      it "if the author does not match the signature" do
+        @zord.instance_variable_set(:@author, FactoryGirl.create(:person))
+        expect(@zord).not_to receive(:parse_and_receive)
+        @zord.receive!
       end
     end
 

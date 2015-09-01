@@ -14,7 +14,7 @@
 //= require_tree ./collections
 //= require_tree ./views
 
-//= require perfect-scrollbar
+//= require perfect-scrollbar/perfect-scrollbar.jquery
 
 var app = {
   collections: {},
@@ -35,15 +35,17 @@ var app = {
   events: _.extend({}, Backbone.Events),
 
   user: function(userAttrs) {
-    if(userAttrs) { return this._user = new app.models.User(userAttrs) }
-    return this._user || false
+    if(userAttrs) {
+      this._user = new app.models.User(userAttrs);
+      return this._user;
+    }
+    return this._user || false;
   },
 
   initialize: function() {
     app.router = new app.Router();
 
     this.setupDummyPreloads();
-    this.setupFacebox();
     this.setupUser();
     this.setupHeader();
     this.setupBackboneLinks();
@@ -52,25 +54,25 @@ var app = {
   },
 
   hasPreload : function(prop) {
-    return !!(window.gon.preloads && window.gon.preloads[prop]) //returning boolean variable so that parsePreloads, which cleans up properly is used instead
+    return !!(window.gon.preloads && window.gon.preloads[prop]); //returning boolean variable so that parsePreloads, which cleans up properly is used instead
   },
 
   setPreload : function(prop, val) {
-    window.gon.preloads = window.gon.preloads || {}
-    window.gon.preloads[prop] = val
+    window.gon.preloads = window.gon.preloads || {};
+    window.gon.preloads[prop] = val;
   },
 
   parsePreload : function(prop) {
-      if(!app.hasPreload(prop)) { return }
+      if(!app.hasPreload(prop)) { return; }
 
-      var preload = window.gon.preloads[prop]
-      delete window.gon.preloads[prop] //prevent dirty state across navigates
+      var preload = window.gon.preloads[prop];
+      delete window.gon.preloads[prop]; //prevent dirty state across navigates
 
-      return(preload)
+      return(preload);
   },
 
   setupDummyPreloads: function() {
-    if (window.gon == undefined) {
+    if (window.gon === undefined) {
       window.gon = {preloads:{}};
     }
   },
@@ -87,12 +89,6 @@ var app = {
     }
   },
 
-  setupFacebox: function() {
-    $.facebox.settings.closeImage = ImagePaths.get('facebox/closelabel.png');
-    $.facebox.settings.loadingImage = ImagePaths.get('facebox/loading.gif');
-    $.facebox.settings.opacity = 0.75;
-  },
-
   setupBackboneLinks: function() {
     Backbone.history.start({pushState: true});
 
@@ -101,35 +97,34 @@ var app = {
       evt.preventDefault();
       var link = $(this);
 
-      $(".stream_title").text(link.text())
-      app.router.navigate(link.attr("href").substring(1) ,true)
+      $(".stream_title").text(link.text());
+      app.router.navigate(link.attr("href").substring(1) ,true);
     });
   },
 
   setupGlobalViews: function() {
     app.hovercard = new app.views.Hovercard();
-    app.aspectMembershipsBlueprint = new app.views.AspectMembershipBlueprint();
     $('.aspect_membership_dropdown').each(function(){
       new app.views.AspectMembership({el: this});
     });
     app.sidebar = new app.views.Sidebar();
+    app.backToTop = new app.views.BackToTop({el: $(document)});
   },
 
   /* mixpanel wrapper function */
   instrument : function(type, name, object, callback) {
-    if(!window.mixpanel) { return }
-    window.mixpanel[type](name, object, callback)
+    if(!window.mixpanel) { return; }
+    window.mixpanel[type](name, object, callback);
   },
 
   setupDisabledLinks: function() {
     $("a.disabled").click(function(event) {
       event.preventDefault();
     });
-  },
+  }
 };
 
 $(function() {
   app.initialize();
 });
 // @license-end
-

@@ -364,6 +364,13 @@ describe User, :type => :model do
         expect(user.language).to eq('de')
       end
     end
+
+    describe "of color_theme" do
+      it "requires availability" do
+        alice.color_theme = "some invalid theme"
+        expect(alice).not_to be_valid
+      end
+    end
   end
 
 
@@ -725,6 +732,12 @@ describe User, :type => :model do
         user.save!
         expect(user.unconfirmed_email).to eql("alice@newmail.com")
       end
+
+      it "downcases the unconfirmed email" do
+        user.unconfirmed_email = "AlIce@nEwmaiL.Com"
+        user.save!
+        expect(user.unconfirmed_email).to eql("alice@newmail.com")
+      end
     end
 
     describe "#confirm_email_token" do
@@ -759,16 +772,16 @@ describe User, :type => :model do
       end
     end
 
-    describe '#mail_confirm_email' do
-      it 'enqueues a mail job on user with unconfirmed email' do
+    describe "#send_confirm_email" do
+      it "enqueues a mail job on user with unconfirmed email" do
         user.update_attribute(:unconfirmed_email, "alice@newmail.com")
         expect(Workers::Mail::ConfirmEmail).to receive(:perform_async).with(alice.id).once
-        expect(alice.mail_confirm_email).to eql(true)
+        alice.send_confirm_email
       end
 
-      it 'enqueues NO mail job on user without unconfirmed email' do
+      it "enqueues NO mail job on user without unconfirmed email" do
         expect(Workers::Mail::ConfirmEmail).not_to receive(:perform_async).with(alice.id)
-        expect(alice.mail_confirm_email).to eql(false)
+        alice.send_confirm_email
       end
     end
 
@@ -899,11 +912,9 @@ describe User, :type => :model do
       context "with autofollow sharing enabled" do
         it "should start sharing with autofollow account" do
           AppConfig.settings.autofollow_on_join = true
-          AppConfig.settings.autofollow_on_join_user = 'one'
+          AppConfig.settings.autofollow_on_join_user = "one"
 
-          wf_double = double
-          expect(wf_double).to receive(:fetch)
-          expect(Webfinger).to receive(:new).with('one').and_return(wf_double)
+          expect(Person).to receive(:find_or_fetch_by_identifier).with("one")
 
           user.seed_aspects
         end
@@ -913,10 +924,58 @@ describe User, :type => :model do
         it "should not start sharing with the diasporahq account" do
           AppConfig.settings.autofollow_on_join = false
 
-          expect(Webfinger).not_to receive(:new)
+          expect(Person).not_to receive(:find_or_fetch_by_identifier)
 
           user.seed_aspects
         end
+      end
+    end
+  end
+
+  describe "#send_welcome_message" do
+    let(:user) { FactoryGirl.create(:user) }
+    let(:podmin) { FactoryGirl.create(:user) }
+
+    context "with welcome message enabled" do
+      before do
+        AppConfig.settings.welcome_message.enabled = true
+      end
+
+      it "should send welcome message from podmin account" do
+        AppConfig.admins.account = podmin.username
+        expect {
+          user.send_welcome_message
+        }.to change(user.conversations, :count).by(1)
+        expect(user.conversations.first.author.owner.username).to eq podmin.username
+      end
+
+      it "should send welcome message text from config" do
+        AppConfig.admins.account = podmin.username
+        AppConfig.settings.welcome_message.text = "Hello %{username}, welcome!"
+        user.send_welcome_message
+        expect(user.conversations.first.messages.first.text).to eq "Hello #{user.username}, welcome!"
+      end
+
+      it "should use subject from config" do
+        AppConfig.settings.welcome_message.subject = "Welcome Message"
+        AppConfig.admins.account = podmin.username
+        user.send_welcome_message
+        expect(user.conversations.first.subject).to eq "Welcome Message"
+      end
+
+      it "should send no welcome message if no podmin is specified" do
+        AppConfig.admins.account = ""
+        user.send_welcome_message
+        expect(user.conversations.count).to eq 0
+      end
+    end
+
+    context "with welcome message disabled" do
+      it "shouldn't send a welcome message" do
+        AppConfig.settings.welcome_message.enabled = false
+        AppConfig.admins.account = podmin.username
+        user.send_welcome_message
+        expect(user.conversations.count).to eq 0
       end
     end
   end
@@ -962,6 +1021,18 @@ describe User, :type => :model do
           expect(@user.send(attr.to_sym)).to be_blank
         end
       end
+
+      it 'disables mail' do
+        @user.disable_mail = false
+        @user.clear_account!
+        expect(@user.reload.disable_mail).to be true
+      end
+
+      it 'sets getting_started and show_community_spotlight_in_stream fields to false' do
+        @user.clear_account!
+        expect(@user.reload.getting_started).to be false
+        expect(@user.reload.show_community_spotlight_in_stream).to be false
+      end
     end
 
     describe "#clearable_attributes" do
@@ -991,8 +1062,71 @@ describe User, :type => :model do
           unconfirmed_email
           confirm_email_token
           last_seen
+          color_theme
         }.sort)
       end
+    end
+  end
+
+  describe "queue_export" do
+    it "queues up a job to perform the export" do
+      user = FactoryGirl.create :user
+      expect(Workers::ExportUser).to receive(:perform_async).with(user.id)
+      user.queue_export
+      expect(user.exporting).to be_truthy
+    end
+  end
+
+  describe "perform_export!" do
+    it "saves a json export to the user" do
+      user = FactoryGirl.create :user, exporting: true
+      user.perform_export!
+      expect(user.export).to be_present
+      expect(user.exported_at).to be_present
+      expect(user.exporting).to be_falsey
+      expect(user.export.filename).to match /.json/
+      expect(ActiveSupport::Gzip.decompress(user.export.file.read)).to include user.username
+    end
+
+    it "compresses the result" do
+      user = FactoryGirl.create :user, exporting: true
+      expect(ActiveSupport::Gzip).to receive :compress
+      user.perform_export!
+    end
+  end
+
+  describe "queue_export_photos" do
+    it "queues up a job to perform the export photos" do
+      user = FactoryGirl.create :user
+      expect(Workers::ExportPhotos).to receive(:perform_async).with(user.id)
+      user.queue_export_photos
+      expect(user.exporting_photos).to be_truthy
+    end
+  end
+
+  describe "perform_export_photos!" do
+    before do
+      @user = alice
+      filename  = 'button.png'
+      image = File.join(File.dirname(__FILE__), '..', 'fixtures', filename)
+      @saved_image = @user.build_post(:photo, :user_file => File.open(image), :to => alice.aspects.first.id)
+      @saved_image.save!
+    end
+
+    it "saves a zip export to the user" do
+      @user.perform_export_photos!
+      expect(@user.exported_photos_file).to be_present
+      expect(@user.exported_photos_at).to be_present
+      expect(@user.exporting_photos).to be_falsey
+      expect(@user.exported_photos_file.filename).to match /.zip/
+      expect(Zip::File.open(@user.exported_photos_file.path).entries.count).to eq(1)
+    end
+
+    it "does not add empty entries when photo not found" do
+      File.unlink @user.photos.first.unprocessed_image.path
+      @user.perform_export_photos!
+      expect(@user.exported_photos_file.filename).to match /.zip/
+      expect(Zip::File.open(@user.exported_photos_file.path).entries.count).to eq(0)
     end
   end
 
@@ -1025,30 +1159,45 @@ describe User, :type => :model do
       @user.sign_up
     end
   end
-  
+
   describe "maintenance" do
     before do
       @user = bob
       AppConfig.settings.maintenance.remove_old_users.enable = true
     end
-    
+
     it "#flags user for removal" do
       remove_at = Time.now+5.days
       @user.flag_for_removal(remove_at)
       expect(@user.remove_after).to eq(remove_at)
     end
   end
-  
+
   describe "#auth database auth maintenance" do
     before do
       @user = bob
       @user.remove_after = Time.now
       @user.save
     end
-    
+
     it "remove_after is cleared" do
       @user.after_database_authentication
       expect(@user.remove_after).to eq(nil)
+    end
+  end
+
+  describe "active" do
+    before do
+      invited_user = FactoryGirl.build(:user, username: nil)
+      invited_user.save(validate: false)
+
+      closed_account = FactoryGirl.create(:user)
+      closed_account.person.closed_account = true
+      closed_account.save
+    end
+
+    it "returns total_users excluding closed accounts & users without usernames" do
+      expect(User.active.count).to eq 6     # 6 users from fixtures
     end
   end
 end

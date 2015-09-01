@@ -4,13 +4,12 @@ Feature: posting from own profile page
     I want to post from my profile page
 
     Background:
-      Given I am on the home page
-      And a user with username "alice"
-      When I sign in as "alice@alice.alice"
-      Given I have following aspects:
+      Given a user with username "alice"
+      And I sign in as "alice@alice.alice"
+      And I have following aspects:
         | Family |
         | Work   |
-      Given I am on "alice@alice.alice"'s page
+      And I am on "alice@alice.alice"'s page
 
     Scenario: posting some text
       Given I expand the publisher
@@ -20,14 +19,14 @@ Feature: posting from own profile page
 
       And I press "Share"
 
-      Then I should see "I want to understand people"
+      Then "I want to understand people" should be post 1
 
-      When I am on the home page
-      Then I should see "I want to understand people"
+      When I go to the home page
+      Then "I want to understand people" should be post 1
 
       When I am on the aspects page
       And I select only "Family" aspect
-      Then I should see "I want to understand people"
+      Then "I want to understand people" should be post 1
 
       When I select all aspects
       And I select only "Work" aspect
@@ -39,7 +38,7 @@ Feature: posting from own profile page
       And I attach "spec/fixtures/button.png" to the publisher
       And I submit the publisher
 
-      When I am on the home page
+      When I go to the home page
       Then I should see a "img" within ".stream_element div.photo_attachments"
       And I should see "who am I?" within ".stream_element"
 

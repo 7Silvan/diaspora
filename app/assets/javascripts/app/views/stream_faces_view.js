@@ -9,12 +9,13 @@ app.views.StreamFaces = app.views.Base.extend({
   tooltipSelector : ".avatar",
 
   initialize : function(){
-    this.updatePeople()
-    app.stream.items.bind("add", this.updatePeople, this)
+    this.updatePeople();
+    app.stream.items.bind("add", this.updatePeople, this);
+    app.stream.items.bind("remove", this.updatePeople, this);
   },
 
   presenter : function() {
-    return {people : this.people}
+    return {people : this.people};
   },
 
   updatePeople : function(){
@@ -30,4 +31,3 @@ app.views.StreamFaces = app.views.Base.extend({
   }
 });
 // @license-end
-

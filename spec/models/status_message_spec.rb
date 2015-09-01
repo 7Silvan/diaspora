@@ -71,6 +71,14 @@ describe StatusMessage, :type => :model do
     end
   end
 
+  describe '.before_validation' do
+    it 'calls build_tags' do
+      status = FactoryGirl.build(:status_message)
+      expect(status).to receive(:build_tags)
+      status.save
+    end
+  end
+
   describe '.before_create' do
     it 'calls build_tags' do
       status = FactoryGirl.build(:status_message)
@@ -255,6 +263,12 @@ STR
       expect(msg_uc.tags).to match_array(tag_array)
       expect(msg_cp.tags).to match_array(tag_array)
     end
+
+    it 'should require tag name not be more than 255 characters long' do
+      message = "##{'a' * (255+1)}"
+      status_message = FactoryGirl.build(:status_message, :text => message)
+      expect(status_message).not_to be_valid
+    end
   end
 
   describe "XML" do
@@ -427,6 +441,14 @@ STR
         expect(sm.contains_open_graph_url_in_text?).to be_nil
         expect(sm.open_graph_url).to be_nil
       end
+    end
+  end
+
+  describe "validation" do
+    it "should not be valid if the author is missing" do
+      sm = FactoryGirl.build(:status_message, text: @message_text)
+      sm.author = nil
+      expect(sm).not_to be_valid
     end
   end
 end

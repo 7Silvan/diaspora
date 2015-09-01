@@ -46,15 +46,6 @@ describe StatusMessagesController, :type => :controller do
       get :new
       expect(response).to redirect_to(stream_path)
     end
-
-    it 'generates a jasmine fixture', :fixture => true do
-      contact = alice.contact_for(bob.person)
-      aspect = alice.aspects.create(:name => 'people')
-      contact.aspects << aspect
-      contact.save
-      get :new, :person_id => bob.person.id, :layout => true
-      save_fixture(html_for("body"), "status_message_new")
-    end
   end
 
   describe '#create' do
@@ -166,6 +157,13 @@ describe StatusMessagesController, :type => :controller do
 #      post :create, status_message_hash.merge!(:format => 'js', :status_message => {:text => ''})
 #      response.body.should include('Status message requires a message or at least one photo')
 #    end
+
+    it "has one participation" do
+      post :create, status_message_hash
+      new_message = StatusMessage.find_by_text(status_message_hash[:status_message][:text])
+      expect(new_message.participations.count).to eq(1)
+      expect(new_message.participations.first.count).to eq(1)
+    end
 
     context 'with photos' do
       before do

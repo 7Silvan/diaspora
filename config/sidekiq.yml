@@ -14,5 +14,6 @@
   - receive
   - receive_salmon
   - http
+  - export
   - maintenance
   - default

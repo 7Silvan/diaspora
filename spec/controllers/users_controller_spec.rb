@@ -11,17 +11,37 @@ describe UsersController, :type => :controller do
     allow(@controller).to receive(:current_user).and_return(@user)
   end
 
-  describe '#export' do
-    it 'can return a json file' do
-      get :export, format: :json
-      expect(response.header["Content-Type"]).to include "application/json"
+  describe '#export_profile' do
+    it 'queues an export job' do
+      expect(@user).to receive :queue_export
+      post :export_profile
+      expect(request.flash[:notice]).to eql(I18n.t('users.edit.export_in_progress'))
+      expect(response).to redirect_to(edit_user_path)
+    end
+  end
+
+  describe "#download_profile" do
+    it "downloads a user's export file" do
+      @user.perform_export!
+      get :download_profile
+      expect(response).to redirect_to(@user.export.url)
     end
   end
 
   describe '#export_photos' do
-    it 'returns a tar file'  do
-      get :export_photos
-      expect(response.header["Content-Type"]).to include "application/octet-stream"
+    it 'queues an export photos job' do
+      expect(@user).to receive :queue_export_photos
+      post :export_photos
+      expect(request.flash[:notice]).to eql(I18n.t('users.edit.export_photos_in_progress'))
+      expect(response).to redirect_to(edit_user_path)
+    end
+  end
+
+  describe '#download_photos' do
+    it "redirects to user's photos zip file"  do
+      @user.perform_export_photos!
+      get :download_photos
+      expect(response).to redirect_to(@user.exported_photos_file.url)
     end
   end
 
@@ -53,7 +73,7 @@ describe UsersController, :type => :controller do
       get :public, :username => @user.username, :format => :atom
       expect(response.body).to include('a href')
     end
-    
+
     it 'includes reshares in the atom feed' do
       reshare = FactoryGirl.create(:reshare, :author => @user.person)
       get :public, :username => @user.username, :format => :atom
@@ -91,9 +111,9 @@ describe UsersController, :type => :controller do
       }.not_to change(@user, :diaspora_handle)
     end
 
-    it 'redirects to the user edit page' do
+    it 'renders the user edit page' do
       put :update, @params
-      expect(response).to redirect_to edit_user_path
+      expect(response).to render_template('edit')
     end
 
     it 'responds with a 204 on a js request' do
@@ -101,17 +121,21 @@ describe UsersController, :type => :controller do
       expect(response.status).to eq(204)
     end
 
-    context 'password updates' do
-      before do
-        @password_params = {:current_password => 'bluepin7',
-                            :password => "foobaz",
-                            :password_confirmation => "foobaz"}
+    describe 'password updates' do
+      let(:password_params) do
+        {:current_password => 'bluepin7',
+         :password => "foobaz",
+         :password_confirmation => "foobaz"}
+      end
+
+      let(:params) do
+        {id: @user.id, user: password_params, change_password: 'Change Password'}
       end
 
       it "uses devise's update with password" do
-        expect(@user).to receive(:update_with_password).with(hash_including(@password_params))
+        expect(@user).to receive(:update_with_password).with(hash_including(password_params))
         allow(@controller).to receive(:current_user).and_return(@user)
-        put :update, :id => @user.id, :user => @password_params
+        put :update, params
       end
     end
 
@@ -125,6 +149,17 @@ describe UsersController, :type => :controller do
            )
         @user.reload
         expect(@user.language).not_to eq(old_language)
+      end
+    end
+
+    describe "color_theme" do
+      it "allow the user to change his color theme" do
+        old_color_theme = "original"
+        @user.color_theme = old_color_theme
+        @user.save
+        put(:update, id: @user.id, user: {color_theme: "dark_green"})
+        @user.reload
+        expect(@user.color_theme).not_to eq(old_color_theme)
       end
     end
 
@@ -202,6 +237,18 @@ describe UsersController, :type => :controller do
     it "returns a 200" do
       get 'edit', :id => @user.id
       expect(response.status).to eq(200)
+    end
+
+    it 'displays community spotlight checkbox' do
+      AppConfig.settings.community_spotlight.enable = true
+      get 'edit', :id => @user.id
+      expect(response.body).to include('input name="user[show_community_spotlight_in_stream]"')
+    end
+
+    it 'hides community spotlight checkbox' do
+      AppConfig.settings.community_spotlight = false
+      get 'edit', :id => @user.id
+      expect(response.body).not_to include('input name="user[show_community_spotlight_in_stream]"')
     end
 
     it 'set @email_pref to false when there is a user pref' do

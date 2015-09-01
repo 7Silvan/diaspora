@@ -1,13 +1,11 @@
 module AspectCukeHelpers
   def click_aspect_dropdown
-    # blueprint: .dropdown .button, bootstrap: .aspect_dropdown .dropdown-toggle
-    find('.dropdown .button, .aspect_dropdown .dropdown-toggle').click
+    find('.aspect_dropdown .dropdown-toggle').click
   end
 
   def toggle_aspect(a_name)
-    # blueprint: .dropdown li, bootstrap: .aspect_dropdown li
     a_id = @me.aspects.where(name: a_name).pluck(:id).first
-    aspect_css = ".dropdown li[data-aspect_id='#{a_id}'], .aspect_dropdown li[data-aspect_id='#{a_id}']"
+    aspect_css = ".aspect_dropdown li[data-aspect_id='#{a_id}']"
     expect(page).to have_selector(aspect_css)
     find(aspect_css).click
   end
@@ -30,7 +28,7 @@ module AspectCukeHelpers
   end
 
   def aspect_dropdown_visible?
-    expect(find('.aspect_membership.dropdown.active')).to be_visible
+    expect(find('.aspect_membership_dropdown.open')).to be_visible
   end
 end
 World(AspectCukeHelpers)
@@ -44,10 +42,10 @@ When /^I click on "([^"]*)" aspect edit icon$/ do |aspect_name|
 end
 
 When /^I select only "([^"]*)" aspect$/ do |aspect_name|
-  click_link 'My Aspects'
-  within('#aspects_list') do
-    click_link 'Deselect all'
-    current_scope.should have_no_css '.selected'
+  click_link "My aspects"
+  within("#aspects_list") do
+    all(".selected").each {|node| node.find(:xpath, "..").click }
+    expect(current_scope).to have_no_css ".selected"
   end
   step %Q(I select "#{aspect_name}" aspect as well)
 end
@@ -84,6 +82,28 @@ When /^I press the aspect dropdown$/ do
   click_aspect_dropdown
 end
 
+When /^(.*) in the aspect creation modal$/ do |action|
+  within("#newAspectModal") do
+    step action
+  end
+end
+
+When /^I drag "([^"]*)" (up|down)$/ do |aspect_name, direction|
+  aspect_id = @me.aspects.where(name: aspect_name).first.id
+  aspect = find(:xpath, "//div[@id='aspect_nav']/ul/a[@data-aspect-id='#{aspect_id}']")
+  target = direction == "up" ? aspect.all(:xpath, "./preceding-sibling::a").last :
+                               aspect.all(:xpath, "./following-sibling::a").first
+  browser = aspect.base.driver.browser
+  mouse = browser.mouse
+  native_aspect = aspect.base.native
+  native_target = target.base.native
+  mouse.down native_aspect
+  mouse.move_to native_target, native_target.size.width / 2, 0
+  sleep 1
+  mouse.up
+  expect(page).to have_no_css "#aspect_nav .ui-sortable.syncing"
+ end
+
 And /^I toggle the aspect "([^"]*)"$/ do |name|
   toggle_aspect(name)
 end
@@ -104,4 +124,8 @@ end
 
 Then /^the aspect dropdown should be visible$/ do
   aspect_dropdown_visible?
+end
+
+Then /^I should see "([^"]*)" as (\d+). aspect$/ do |aspect_name, position|
+  expect(find("#aspect_nav a:nth-child(#{position.to_i + 2})")).to have_text aspect_name
 end

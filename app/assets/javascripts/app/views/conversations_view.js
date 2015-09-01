@@ -5,33 +5,54 @@ app.views.Conversations = Backbone.View.extend({
   el: "#conversations_container",
 
   events: {
-    "mouseenter .stream_element.conversation" : "showParticipants",
-    "mouseleave .stream_element.conversation" : "hideParticipants"
+    "keydown textarea#message_text" : "keyDown",
+    "conversation:loaded" : "setupConversation"
   },
 
   initialize: function() {
-    $("#people_stream.contacts .header .entypo").tooltip({ 'placement': 'bottom'});
-    // TODO doesn't work anymore
-    if ($('#first_unread').length > 0) {
-      $("html").scrollTop($('#first_unread').offset().top-50);
+    if($("#conversation_new:visible").length > 0) {
+      new app.views.ConversationsForm({
+        el: $("#conversation_new"),
+        contacts: gon.contacts
+      });
     }
-
-    new app.views.ConversationsForm({contacts: gon.contacts});
-
-    $('.timeago').each(function(i,e) {
-        var jqe = $(e);
-        jqe.attr('title', new Date(jqe.attr('datetime')).toLocaleString());
-      })
-      .timeago()
-      .tooltip();
+    this.setupConversation();
   },
 
-  hideParticipants: function(e){
-    $(e.currentTarget).find('.participants').slideUp('300');
+  setupConversation: function() {
+    app.helpers.timeago($(this.el));
+    $(".control-icons a").tooltip({placement: "bottom"});
+
+    var conv = $(".conversation-wrapper .stream_element.selected"),
+        cBadge = $("#conversations-link .badge");
+
+    if(conv.hasClass("unread") ){
+      var unreadCount = parseInt(conv.find(".unread_message_count").text(), 10);
+
+      if(cBadge.text() !== "") {
+        cBadge.text().replace(/\d+/, function(num){
+          num = parseInt(num, 10) - unreadCount;
+          if(num > 0) {
+            cBadge.text(num);
+          } else {
+            cBadge.text(0).addClass("hidden");
+          }
+        });
+      }
+      conv.removeClass("unread");
+      conv.find(".unread_message_count").remove();
+
+      var pos = $("#first_unread").offset().top - 50;
+      $("html").animate({scrollTop:pos});
+    } else {
+      $("html").animate({scrollTop:0});
+    }
   },
 
-  showParticipants: function(e){
-    $(e.currentTarget).find('.participants').slideDown('300');
+  keyDown : function(evt) {
+    if( evt.keyCode === 13 && evt.ctrlKey ) {
+      $(evt.target).parents("form").submit();
+    }
   }
 });
 // @license-end

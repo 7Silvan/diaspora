@@ -5,6 +5,7 @@ describe("app.views.ProfileSidebar", function() {
       diaspora_id: "alice@umbrella.corp",
       name: "Project Alice",
       relationship: 'mutual',
+      show_profile_info: true,
       profile: {
         bio: "confidential",
         location: "underground",
@@ -21,7 +22,6 @@ describe("app.views.ProfileSidebar", function() {
 
   context("#presenter", function() {
     it("contains necessary elements", function() {
-      console.log(this.view.presenter());
       expect(this.view.presenter()).toEqual(jasmine.objectContaining({
         relationship: 'mutual',
         show_profile_info: true,

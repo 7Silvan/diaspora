@@ -18,6 +18,8 @@ Diaspora::Application.routes.draw do
     mount Sidekiq::Web => '/sidekiq', :as => 'sidekiq'
   end
 
+  mount DiasporaFederation::Engine => "/"
+
   get "/atom.xml" => redirect('http://blog.diasporafoundation.org/feed/atom') #too many stupid redirects :()
 
   get 'oembed' => 'posts#oembed', :as => 'oembed'
@@ -28,16 +30,13 @@ Diaspora::Application.routes.draw do
 
   resources :posts do
     member do
-      get :next
-      get :previous
       get :interactions
     end
 
-    resources :poll_participations, :only => [:create]
-
-    resources :likes, :only => [:create, :destroy, :index ]
-    resources :participations, :only => [:create, :destroy, :index]
-    resources :comments, :only => [:new, :create, :destroy, :index]
+    resource :participation, only: %i(create destroy)
+    resources :poll_participations, only: :create
+    resources :likes, only: %i(create destroy index)
+    resources :comments, only: %i(new create destroy index)
   end
 
 
@@ -66,6 +65,9 @@ Diaspora::Application.routes.draw do
   resources :aspects do
     put :toggle_contact_visibility
     put :toggle_chat_privilege
+    collection do
+      put "order" => :update_order
+    end
   end
 
   get 'bookmarklet' => 'status_messages#bookmarklet'
@@ -91,7 +93,11 @@ Diaspora::Application.routes.draw do
 
   resources :tags, :only => [:index]
 
-  resources "tag_followings", :only => [:create, :destroy, :index]
+  resources "tag_followings", only: %i(create destroy index) do
+    collection do
+      get :manage
+    end
+  end
 
   get 'tags/:name' => 'tags#show', :as => 'tag'
 
@@ -101,8 +107,10 @@ Diaspora::Application.routes.draw do
 
   resource :user, :only => [:edit, :update, :destroy], :shallow => true do
     get :getting_started_completed
-    get :export, format: :json
-    get :export_photos
+    post :export_profile
+    get :download_profile
+    post :export_photos
+    get :download_photos
   end
 
   controller :users do
@@ -118,7 +126,6 @@ Diaspora::Application.routes.draw do
   get 'users/edit' => redirect('/user/edit')
 
   devise_for :users, :controllers => {:registrations => "registrations",
-                                      :passwords     => "passwords",
                                       :sessions      => "sessions"}
 
   #legacy routes to support old invite routes
@@ -131,17 +138,23 @@ Diaspora::Application.routes.draw do
 
   # Admin backend routes
 
-  scope 'admins', :controller => :admins do
+  scope "admins", controller: :admins do
     match :user_search, via: [:get, :post]
-    get   :admin_inviter
-    get   :weekly_user_stats
-    get   :correlations
-    get   :stats, :as => 'pod_stats'
-    get   "add_invites/:invite_code_id" => 'admins#add_invites', :as => 'add_invites'
+    get :admin_inviter
+    get :weekly_user_stats
+    get :stats, as: "pod_stats"
+    get :dashboard, as: "admin_dashboard"
+    get "add_invites/:invite_code_id" => "admins#add_invites", :as => "add_invites"
   end
 
   namespace :admin do
+    resources :pods, only: :index do
+      post :recheck
+    end
+
     post 'users/:id/close_account' => 'users#close_account', :as => 'close_account'
+    post 'users/:id/lock_account' => 'users#lock_account', :as => 'lock_account'
+    post 'users/:id/unlock_account' => 'users#unlock_account', :as => 'unlock_account'
   end
 
   resource :profile, :only => [:edit, :update]
@@ -174,16 +187,13 @@ Diaspora::Application.routes.draw do
       get :tag_index
     end
   end
-  get '/u/:username' => 'people#show', :as => 'user_profile'
-  get '/u/:username/profile_photo' => 'users#user_photo'
+  get '/u/:username' => 'people#show', :as => 'user_profile', :constraints => { :username => /[^\/]+/ }
+  get '/u/:username/profile_photo' => 'users#user_photo', :constraints => { :username => /[^\/]+/ }
 
 
   # Federation
 
   controller :publics do
-    get 'webfinger'             => :webfinger
-    get 'hcard/users/:guid'     => :hcard
-    get '.well-known/host-meta' => :host_meta
     post 'receive/users/:guid'  => :receive
     post 'receive/public'       => :receive_public
     get 'hub'                   => :hub
@@ -219,20 +229,27 @@ Diaspora::Application.routes.draw do
   # Mobile site
 
   get 'mobile/toggle', :to => 'home#toggle_mobile', :as => 'toggle_mobile'
+  get "/m", to: "home#force_mobile", as: "force_mobile"
 
   # Help
   get 'help' => 'help#faq', :as => 'help'
+  get 'help/:topic' => 'help#faq'
 
   #Protocol Url
   get 'protocol' => redirect("http://wiki.diasporafoundation.org/Federation_Protocol_Overview")
 
-  #Statistics
-  get :statistics, controller: :statistics
+  # NodeInfo
+  get ".well-known/nodeinfo", to: "node_info#jrd"
+  get "nodeinfo/:version",    to: "node_info#document", as: "node_info", constraints: {version: /\d+\.\d+/}
+  get "statistics",           to: "node_info#statistics"
 
   # Terms
   if AppConfig.settings.terms.enable?
     get 'terms' => 'terms#index'
   end
+
+  # Relay
+  get ".well-known/x-social-relay" => "social_relay#well_known"
 
   # Startpage
   root :to => 'home#show'

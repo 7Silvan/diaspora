@@ -31,7 +31,7 @@ Feature: new user registration
     When I follow "awesome_button"
     And I reject the alert
     Then I should be on the getting started page
-    And I should see a flash message containing "Alright, I'll wait."
+    And I should see a flash message containing "All right, I’ll wait."
 
   Scenario: new user skips the setup wizard
     When I follow "awesome_button"
@@ -44,7 +44,7 @@ Feature: new user registration
     And I confirm the alert
     Then I should be on the stream page
     When I submit the publisher
-    Then "Hey everyone, I'm #NewHere." should be post 1
+    Then "Hey everyone, I’m #newhere." should be post 1
 
   Scenario: new user with some tags posts first status message
     When I fill in the following:
@@ -54,7 +54,7 @@ Feature: new user registration
     And I follow "awesome_button"
     Then I should be on the stream page
     When I submit the publisher
-    Then "Hey everyone, I'm #NewHere. I'm interested in #rockstar." should be post 1
+    Then "Hey everyone, I’m #newhere. I’m interested in #rockstar." should be post 1
 
   Scenario: closing a popover clears getting started
     When I follow "awesome_button"
@@ -71,20 +71,29 @@ Feature: new user registration
     And I go to the new user registration page
     And I fill in the following:
         | user_username        | $%&(/&%$&/=)(/    |
-    And I press "Continue"
+    And I press "Sign up"
     Then I should not be able to sign up
     And I should have a validation error on "user_username, user_password, user_email"
 
     When I fill in the following:
         | user_username     | valid_user                        |
         | user_email        | this is not a valid email $%&/()( |
-    And I press "Continue"
+    And I press "Sign up"
     Then I should not be able to sign up
     And I should have a validation error on "user_password, user_email"
 
     When I fill in the following:
         | user_email        | valid@email.com        |
         | user_password     | 1                      |
-    And I press "Continue"
+    And I press "Sign up"
     Then I should not be able to sign up
     And I should have a validation error on "user_password, user_password_confirmation"
+
+  Scenario: User signs up with an already existing username and email and then tries to sign in (Issue #6136)
+    When I log out manually
+    And I go to the new user registration page
+    And I fill in the new user form with an existing email and username
+    And I submit the form
+    Then I should see a flash message indicating failure
+    When I click the sign in button
+    Then I should not see a flash message indicating failure

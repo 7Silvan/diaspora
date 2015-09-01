@@ -12,6 +12,7 @@ pt-BR:
   _home: "Início"
   _photos: "Fotos"
   _services: "Serviços"
+  _statistics: "Estatística"
   _terms: "Termos"
   account: "Conta"
   activerecord:
@@ -141,8 +142,6 @@ pt-BR:
     add_to_aspect:
       failure: "Não foi possível adicionar o contato ao aspecto."
       success: "Contato adicionado ao aspecto com sucesso."
-    aspect_contacts:
-      done_editing: "Edição concluída"
     aspect_listings:
       add_an_aspect: "+ Adicione um Aspecto"
       deselect_all: "Desmarcar tudo"
@@ -161,23 +160,18 @@ pt-BR:
       failure: "%{name} não está vazio e por isso não pode ser removido."
       success: "%{name} foi removido com sucesso."
     edit:
-      add_existing: "Adicione um contato existente"
+      aspect_chat_is_enabled: "Contatos neste aspecto são capazes de falar com você."
+      aspect_chat_is_not_enabled: "Contatos neste aspecto não são capazes de falar com você."
       aspect_list_is_not_visible: "Contatos neste aspecto não podem ver uns aos outros."
       aspect_list_is_visible: "Contatos neste aspecto podem ver uns aos outros."
       confirm_remove_aspect: "Tem certeza que deseja apagar este aspecto?"
-      done: "Feito"
+      grant_contacts_chat_privilege: "Conceder aos contatos neste aspecto privilégios de bate-papo?"
       make_aspect_list_visible: "Tornar contatos desse aspecto visíveis entre si?"
-      manage: "Gerenciar"
       remove_aspect: "Apagar este aspecto"
       rename: "Renomear"
       set_visibility: "Configurar visibilidade"
       update: "atualizar"
       updating: "atualizando"
-    few: "%{count} aspectos"
-    helper:
-      are_you_sure: "Tem certeza em apagar este aspecto?"
-      aspect_not_empty: "Aspecto não está vazio"
-      remove: "remover"
     index:
       diaspora_id:
         content_1: "Sua diaspora* ID é:"
@@ -218,11 +212,6 @@ pt-BR:
         heading: "Conectar Serviços"
       unfollow_tag: "Parar de seguir #%{tag}"
       welcome_to_diaspora: "Bem-vindo(a) a diaspora*, %{name}!"
-    many: "%{count} aspectos"
-    move_contact:
-      error: "Não foi possível mover o contato: %{inspect}"
-      failure: "Falhou %{inspect}"
-      success: "Pessoa movida para o novo aspecto"
     new:
       create: "Criar"
       name: "Nome (só é visível para você)"
@@ -240,14 +229,6 @@ pt-BR:
       family: "Família"
       friends: "Amigos"
       work: "Trabalho"
-    selected_contacts:
-      manage_your_aspects: "Gerencie seus aspectos."
-      no_contacts: "Você não tem nenhum contato aqui ainda."
-      view_all_community_spotlight: "Ver todos os destaques da comunidade"
-      view_all_contacts: "Ver todos os contatos"
-    show:
-      edit_aspect: "editar aspecto"
-    two: "%{count} aspectos"
     update:
       failure: "Seu aspecto %{name} tem um nome muito longo para ser salvo."
       success: "Seu aspecto %{name} foi editado com sucesso."
@@ -267,38 +248,30 @@ pt-BR:
     post_success: "Publicado! Fechando!"
   cancel: "Cancelar"
   comments:
-    few: "%{count} comentários"
-    many: "%{count} comentários"
     new_comment:
       comment: "Comentar"
       commenting: "Comentando..."
     one: "1 comentário"
     other: "%{count} comentários"
-    two: "%{count} comentários"
     zero: "nenhum comentário"
   contacts:
     create:
       failure: "Falha em criar contato"
-    few: "%{count} contatos"
     index:
       add_a_new_aspect: "Adicione um novo aspecto"
       add_contact: "Adicionar contato"
       add_to_aspect: "Adicionar contatos para %{name}"
-      add_to_aspect_link: "adicionar contatos para %{name}"
       all_contacts: "Todos os Contatos"
       community_spotlight: "Destaque da Comunidade"
-      many_people_are_you_sure: "Tem certeza de que deseja iniciar uma conversa privada com mais de %{suggested_limit} contatos? Uma publicação para o aspecto que eles estão pode ser uma melhor maneira de contactá-los."
       my_contacts: "Meus Contatos"
       no_contacts: "Parece que você precisa adicionar mais contatos!"
       no_contacts_message: "Veja %{community_spotlight}"
-      no_contacts_message_with_aspect: "Veja %{community_spotlight} ou %{add_to_aspect_link}"
       only_sharing_with_me: "Só compartilhando comigo"
       remove_contact: "Remover contato"
       start_a_conversation: "Iniciar uma conversa"
       title: "Contatos"
       user_search: "Busca de Usuário"
       your_contacts: "Seus Contatos"
-    many: "%{count} contatos"
     one: "1 contato"
     other: "%{count} contatos"
     sharing:
@@ -306,7 +279,6 @@ pt-BR:
     spotlight:
       community_spotlight: "Destaque da Comunidade"
       suggest_member: "Sugerir um membro"
-    two: "%{count} contatos"
     zero: "contatos"
   conversations:
     conversation:
@@ -316,7 +288,8 @@ pt-BR:
       no_contact: "Cuidado, você precisa adicionar o contato primeiro!"
       sent: "Mensagem enviada"
     destroy:
-      success: "Conversa removida com sucesso"
+      delete_success: "Conversa excluída com sucesso"
+      hide_success: "Conversa escondida com sucesso"
     helper:
       new_messages:
         few: "%{count} novas mensagens"
@@ -342,6 +315,7 @@ pt-BR:
       fail: "Mensagem inválida"
     show:
       delete: "apagar e fechar esta conversa"
+      hide: "Esconder e silenciar conversa"
       reply: "responder"
       replying: "Respondendo..."
   date:
@@ -417,6 +391,9 @@ pt-BR:
       keyboard_shortcuts_li2: "k - pular para a publicação anterior"
       keyboard_shortcuts_li3: "c - comentar a publicação atual"
       keyboard_shortcuts_li4: "l - curtir a publicação atual"
+      keyboard_shortcuts_li5: "Recompartilhar a publicação atual"
+      keyboard_shortcuts_li6: "Expandir a publicação atual"
+      keyboard_shortcuts_li7: "Abrir o primeiro link na publicação atual"
       keyboard_shortcuts_q: "Quais teclas de atalho estão disponíveis?"
       title: "Teclas de atalho"
     markdown: "Markdown"
@@ -472,6 +449,8 @@ pt-BR:
       insert_images_comments_a2: "pode ser usado para inserir imagens da web aos comentários assim como às publicações."
       insert_images_comments_q: "Posso inserir imagens em comentários?"
       insert_images_q: "Como eu insiro imagens às publicações?"
+      post_poll_a: "Clique no ícone gráfico para gerar uma enquete. Digite uma pergunta e pelo menos duas respostas. Não se esqueça de colocar sua postagem como publica, se você quer que todos sejam capazes de participar de sua enquete."
+      post_poll_q: "Como posso adicionar uma enquete para a minha publicação?"
       size_of_images_a: "Não. Imagens são redimensionadas automaticamente para preencherem o fluxo. Markdown não tem um código para especificar o tamanho de uma imagem."
       size_of_images_q: "Posso personalizar o tamanho das imagens em publicações ou comentários?"
       stream_full_of_posts_a1: "Seu fluxo é composto de três tipos de publicações:"
@@ -540,6 +519,7 @@ pt-BR:
       add_to_aspect_li5: "Mas se Ben vai até a página de perfil de Amy, então ele verá publicações privadas que Amy tenha feito ao aspecto dela do qual que ele faça parte (assim como publicações públicas que qualquer pessoa pode ver lá)."
       add_to_aspect_li6: "Ben será capaz de ver o perfil privado de Amy (bio, localização, sexo, aniversário)."
       add_to_aspect_li7: "Amy aparecerá sob \"Só compartilhando comigo\" na página de contatos de Ben."
+      add_to_aspect_li8: "Amy também será capaz de @mencionar Ben em uma publicação."
       add_to_aspect_q: "O que acontece quando eu adiciono alguém a um dos meus aspectos? Ou quando alguém me adiciona a um dos aspectos deles?"
       list_not_sharing_a: "Não, mas você pode ver se algumas pessoas estão compartilhando com você ou não, visitando o perfil deles. Se eles estão, a barra sob a foto de perfil deles estará verde; se não, estará cinza. Você deve receber uma notificação cada vez que alguém começa a compartilhar com você."
       list_not_sharing_q: "Existe uma lista de pessoas as quais eu adicionei a um de meus aspectos, mas que não tenham me adicionado a um dos aspectos deles?"
@@ -547,6 +527,8 @@ pt-BR:
       only_sharing_q: "Quem são as pessoas listadas em \"Só compartilhando comigo\" em minha página de contatos?"
       see_old_posts_a: "Não. Eles somente serão capazes de ver novas publicações para o aspecto. Eles (e todos os demais) podem ver suas publicações públicas antigas na sua página de perfil, e eles também podem vê-las no fluxo deles."
       see_old_posts_q: "Quando eu adiciono alguém a um aspecto, eles podem ver publicações antigas que eu já tenha feito para aquele aspecto?"
+      sharing_notification_a: "Você recebera uma notificação cada vez que alguém começar a compartilhar com você."
+      sharing_notification_q: "Como saber quando alguém começar a compartilhar comigo?"
       title: "Compartilhando"
     tags:
       filter_tags_a: "Ainda não é possível diretamente através de diaspora*, mas algumas %{third_party_tools} tem sido escritas para poder prover isto."
@@ -726,7 +708,9 @@ pt-BR:
       other: "%{actors} começaram a compartilhar com você."
       zero: "Ninguém está compartilhando com você."
   notifier:
+    a_limited_post_comment: "Há um novo comentário em um post limitado na diáspora * para você conferir"
     a_post_you_shared: "uma publicação."
+    a_private_message: "Há uma nova mensagem privada no diáspora * para você conferir"
     accept_invite: "Aceite Seu Convite Para Diaspora*!"
     click_here: "clique aqui"
     comment_on_post:
@@ -735,6 +719,29 @@ pt-BR:
       click_link: "Para confirmar o seu novo endereço de email %{unconfirmed_email}, por favor clique neste link:"
       subject: "Por favor, ative o seu novo endereço de email %{unconfirmed_email}"
     email_sent_by_diaspora: "Este email foi enviado por %{pod_name}. Se você deseja parar de receber emails como este,"
+    export_email:
+      body: |-
+          Olá %{name},
+
+          Os seus dados foram processados e estão prontos para transferência, seguindo [este link](%{url}).
+
+          Felicidades,
+
+          Diáspora * email automatico!
+      subject: "Os seus dados pessoais estão prontos para transferência, %{name}"
+    export_failure_email:
+      body: |-
+          Olá %{name}
+
+          Encontramos um problema ao processar seus dados pessoais para transferência.
+          Por favor, tente novamente!
+
+          Desculpe,
+
+          Diáspora * email automatico!
+      subject: "Lamentamos, houve um problema com seus dados, %{name}"
+    export_photos_email:
+      subject: "Suas fotos estão prontas para baixar %{name}"
     hello: "Olá %{name}!"
     invite:
       message: |-
@@ -760,6 +767,8 @@ pt-BR:
       subject: "%{name} mencionou você em Diaspora*"
     private_message:
       reply_to_or_view: "Responder ou visualizar esta conversa >"
+    remove_old_user:
+      subject: "A sua conta no diaspora* foi marcada para a remoção devido a inatividade"
     report_email:
       body: |-
           Olá,
@@ -804,7 +813,6 @@ pt-BR:
       add_contact_from_tag: "adicionar contato de tag"
     aspect_list:
       edit_membership: "editar participação no aspecto"
-    few: "%{count} pessoas"
     helper:
       is_not_sharing: "%{name} não está compartilhando com você"
       is_sharing: "%{name} está compartilhando com você"
@@ -818,7 +826,6 @@ pt-BR:
       search_handle: "Para que você encontre seus amigos, use a diaspora* ID deles (nomedeusuario@nomedopod.org)."
       searching: "pesquisando, por favor tenha paciência..."
       send_invite: "Nada ainda? Envie um convite!"
-    many: "%{count} pessoas"
     one: "1 pessoa"
     other: "%{count} pessoas"
     person:
@@ -855,7 +862,6 @@ pt-BR:
       add_some: "adicione algo"
       edit: "editar"
       you_have_no_tags: "você não tem tags!"
-    two: "%{count} pessoas"
     webfinger:
       fail: "Desculpe, não conseguimos encontrar %{handle}."
     zero: "nenhuma pessoa"
@@ -953,15 +959,12 @@ pt-BR:
       update: "Atualizar"
     invalid_invite: "O link com o convite não é mais válido."
     new:
-      continue: "Continue"
       create_my_account: "Criar minha conta!"
-      diaspora: "♥ Diaspora*"
       email: "EMAIL"
       enter_email: "Digite o email"
       enter_password: "Digite a senha (mínimo de seis caracteres)"
       enter_password_again: "Digite novamente a tua senha"
       enter_username: "Escolha um nome de usuário (use somente letras, números e sublinhados)"
-      hey_make: "HEY,<br/>FAÇA<br/>ALGO."
       join_the_movement: "Junte-se ao movimento!"
       password: "SENHA"
       password_confirmation: "CONFIRMAÇÃO DE SENHA"
@@ -1037,14 +1040,9 @@ pt-BR:
       no_friends: "Nenhum amigo do Facebook foi encontrado."
       service_friends: "%{service} Amigos"
     index:
-      connect_to_facebook: "Conectar-se ao Facebook"
-      connect_to_tumblr: "Conectar-se ao Tumblr"
-      connect_to_twitter: "Conectar-se ao Twitter"
-      connect_to_wordpress: "Conectar-se ao Wordpress"
       disconnect: "desconectar"
       edit_services: "Editar serviços"
       logged_in_as: "logado(a) como"
-      no_services: "Você ainda não tem serviços conectados na sua conta."
       really_disconnect: "Desconectar %{service}?"
       services_explanation: "A conexão com serviços externos permite que você faça suas publicações em serviços conectados ao mesmo tempo em que você as escreve em diaspora*."
     inviter:
@@ -1163,6 +1161,8 @@ pt-BR:
     too_long: "Por favor, faça com que suas mensagens de status sejam menores que %{count} caracteres. Neste momento elas estão com %{current_length} caracteres."
   stream_helper:
     hide_comments: "Ocultar todos os comentários"
+    no_more_posts: "Você chegou ao final do fluxo."
+    no_posts_yet: "Não existem publicações ainda."
     show_comments:
       one: "Ver mais um comentário"
       other: "Ver mais %{count} comentários"
@@ -1198,7 +1198,6 @@ pt-BR:
       title: "Atividade Pública"
     tags:
       contacts_title: "Pessoas que seguem essa tag"
-      tag_prefill_text: "Uma coisa sobre %{tag_name} é... "
       title: "Publicações com a tag: %{tags}"
   tag_followings:
     create:
@@ -1211,16 +1210,13 @@ pt-BR:
   tags:
     show:
       follow: "Seguir #%{tag}"
-      followed_by_people:
-        one: "Seguido por uma pessoa"
-        other: "Seguido por %{count} pessoas"
-        zero: "Seguido por ninguém"
       following: "Seguindo #%{tag}"
-      nobody_talking: "Ninguém está falando sobre %{tag} ainda."
       none: "A tag vazia não existe!"
-      people_tagged_with: "Pessoas marcadas com %{tag}"
-      posts_tagged_with: "Publicações marcadas com #%{tag}"
       stop_following: "Parar de seguir #%{tag}"
+      tagged_people:
+        one: "1 pessoa marcada com %{tag}"
+        other: "%{count} pessoas marcadas com %{tag}"
+        zero: "Ninguém marcado com %{tag}"
   terms_and_conditions: "Termos e Condições"
   undo: "Desfazer?"
   username: "Usuário"
@@ -1254,8 +1250,8 @@ pt-BR:
       comment_on_post: "alguém comenta sua publicação"
       current_password: "Senha Atual"
       current_password_expl: "o que você usa atualmente..."
+      download_export: "Baixar o meu perfil"
       download_photos: "Baixar minhas fotos"
-      download_xml: "Baixar meu XML"
       edit_account: "Editar Conta"
       email_awaiting_confirmation: "Temos que lhe enviar um link para a confirmação do email %{unconfirmed_email}. Enquanto você não confirmar o seu novo endereço de email, nós continuaremos utilizando o endereço antigo: %{email}."
       export_data: "Exportar dados"
@@ -1264,9 +1260,10 @@ pt-BR:
       liked: "alguém curte sua publicação"
       mentioned: "você é mencionado(a) em uma publicação"
       new_password: "Nova senha"
-      photo_export_unavailable: "Exportação de fotos indisponível no momento."
       private_message: "você recebe uma mensagem privada"
       receive_email_notifications: "Receber notificações por email quando:"
+      request_export: "Solicitar dados do meu perfil"
+      request_export_update: "Atualizar dados do meu perfil"
       reshared: "alguém recompartilha sua publicação"
       show_community_spotlight: "Mostrar Destaque da Comunidade no Fluxo"
       show_getting_started: "Mostrar dicas de como começar"
@@ -1288,6 +1285,7 @@ pt-BR:
       who_are_you: "Quem é você?"
     privacy_settings:
       ignored_users: "Usuários Ignorados"
+      no_user_ignored_message: "Você não está ignorando nenhum outro usuário"
       stop_ignoring: "Parar de ignorar"
       title: "Configurações de Privacidade"
     public:

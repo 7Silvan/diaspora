@@ -2,7 +2,7 @@
 
 app.models.Person = Backbone.Model.extend({
   url: function() {
-    return Routes.person_path(this.get('guid'));
+    return Routes.person(this.get("guid"));
   },
 
   initialize: function() {
@@ -12,20 +12,20 @@ app.models.Person = Backbone.Model.extend({
 
   isSharing: function() {
     var rel = this.get('relationship');
-    return (rel == 'mutual' || rel == 'sharing');
+    return (rel === 'mutual' || rel === 'sharing');
   },
 
   isReceiving: function() {
     var rel = this.get('relationship');
-    return (rel == 'mutual' || rel == 'receiving');
+    return (rel === 'mutual' || rel === 'receiving');
   },
 
   isMutual: function() {
-    return (this.get('relationship') == 'mutual');
+    return (this.get('relationship') === 'mutual');
   },
 
   isBlocked: function() {
-    return (this.get('relationship') == 'blocked');
+    return (this.get('relationship') === 'blocked');
   },
 
   block: function() {

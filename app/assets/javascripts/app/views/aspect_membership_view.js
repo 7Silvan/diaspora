@@ -12,13 +12,22 @@
 app.views.AspectMembership = app.views.AspectsDropdown.extend({
 
   events: {
-    "click ul.aspect_membership.dropdown-menu > li.aspect_selector": "_clickHandler",
-    "keypress ul.aspect_membership.dropdown-menu > li.aspect_selector": "_clickHandler"
+    "click ul.aspect_membership.dropdown-menu > li.aspect_selector"
+        : "_clickHandler",
+    "keypress ul.aspect_membership.dropdown-menu > li.aspect_selector"
+        : "_clickHandler"
   },
 
   initialize: function() {
     this.list_item = null;
     this.dropdown  = null;
+    if (this.$(".newAspectContainer").length > 0) {
+      this.aspectCreateView = new app.views.AspectCreate({
+        el:       this.$(".newAspectContainer"),
+        personId: this.$("ul.dropdown-menu").data("person_id")
+      });
+      this.aspectCreateView.render();
+    }
   },
 
   // decide what to do when clicked
@@ -68,20 +77,28 @@ app.views.AspectMembership = app.views.AspectsDropdown.extend({
     return aspect_membership.save();
   },
 
-  _successSaveCb: function(aspect_membership) {
-    var aspect_id = aspect_membership.get('aspect_id');
-    var membership_id = aspect_membership.get('id');
-    var li = this.dropdown.find('li[data-aspect_id="'+aspect_id+'"]');
+  _successSaveCb: function(aspectMembership) {
+    var aspectId = aspectMembership.get("aspect_id"),
+        membershipId = aspectMembership.get("id"),
+        li = this.dropdown.find("li[data-aspect_id='" + aspectId + "']"),
+        personId = li.closest("ul.dropdown-menu").data("person_id"),
+        startSharing = false;
 
     // the user didn't have this person in any aspects before, congratulate them
     // on their newly found friendship ;)
-    if( this.dropdown.find('li.selected').length == 0 ) {
-      var msg = Diaspora.I18n.t('aspect_dropdown.started_sharing_with', { 'name': this._name() });
-      Diaspora.page.flashMessages.render({ 'success':true, 'notice':msg });
+    if( this.dropdown.find("li.selected").length === 0 ) {
+      var msg = Diaspora.I18n.t("aspect_dropdown.started_sharing_with", { "name": this._name() });
+      startSharing = true;
+      Diaspora.page.flashMessages.render({ "success": true, "notice": msg });
     }
 
-    li.attr('data-membership_id', membership_id) // just to be sure...
-      .data('membership_id', membership_id);
+    app.events.trigger("aspect_membership:create", {
+      membership: { aspectId: aspectId, personId: personId },
+      startSharing: startSharing
+    });
+
+    li.attr("data-membership_id", membershipId) // just to be sure...
+      .data("membership_id", membershipId);
 
     this.updateSummary(li);
     this._done();
@@ -110,20 +127,29 @@ app.views.AspectMembership = app.views.AspectsDropdown.extend({
     return aspect_membership.destroy();
   },
 
-  _successDestroyCb: function(aspect_membership) {
-    var membership_id = aspect_membership.get('id');
-    var li = this.dropdown.find('li[data-membership_id="'+membership_id+'"]');
+  _successDestroyCb: function(aspectMembership) {
+    var membershipId = aspectMembership.get("id"),
+        li = this.dropdown.find("li[data-membership_id='" + membershipId + "']"),
+        aspectId = li.data("aspect_id"),
+        personId = li.closest("ul.dropdown-menu").data("person_id"),
+        stopSharing = false;
 
-    li.removeAttr('data-membership_id')
-      .removeData('membership_id');
+    li.removeAttr("data-membership_id")
+      .removeData("membership_id");
     this.updateSummary(li);
 
     // we just removed the last aspect, inform the user with a flash message
     // that he is no longer sharing with that person
-    if( this.dropdown.find('li.selected').length == 0 ) {
-      var msg = Diaspora.I18n.t('aspect_dropdown.stopped_sharing_with', { 'name': this._name() });
-      Diaspora.page.flashMessages.render({ 'success':true, 'notice':msg });
+    if( this.dropdown.find("li.selected").length === 0 ) {
+      var msg = Diaspora.I18n.t("aspect_dropdown.stopped_sharing_with", { "name": this._name() });
+      stopSharing = true;
+      Diaspora.page.flashMessages.render({ "success": true, "notice": msg });
     }
+
+    app.events.trigger("aspect_membership:destroy", {
+      membership: { aspectId: aspectId, personId: personId },
+      stopSharing: stopSharing
+    });
 
     this._done();
   },
@@ -138,8 +164,7 @@ app.views.AspectMembership = app.views.AspectsDropdown.extend({
   // refresh the button text to reflect the current aspect selection status
   updateSummary: function(target) {
     this._toggleCheckbox(target);
-    this._updateButton('green');
-  },
+    this._updateButton("btn-success");
+  }
 });
 // @license-end
-

@@ -76,11 +76,11 @@ app.pages.Profile = app.views.Base.extend({
     }
 
     // a collection is set, this means we want to view photos
-    var route = this.streamCollection ? 'person_photos_path' : 'person_stream_path';
+    var route = this.streamCollection ? "personPhotos" : "personStream";
     var view = this.streamViewClass ? this.streamViewClass : app.views.Stream;
 
     app.stream = new app.models.Stream(null, {
-      basePath: Routes[route](app.page.model.get('guid')),
+      basePath: Routes[route](app.page.model.get("guid")),
       collection: this.streamCollection
     });
     app.stream.fetch();
@@ -92,7 +92,7 @@ app.pages.Profile = app.views.Base.extend({
     return new view({model: app.stream});
   },
 
-  blockPerson: function(evt) {
+  blockPerson: function() {
     if( !confirm(Diaspora.I18n.t('ignore_user')) ) return;
 
     var block = this.model.block();
@@ -106,7 +106,7 @@ app.pages.Profile = app.views.Base.extend({
     return false;
   },
 
-  unblockPerson: function(evt) {
+  unblockPerson: function() {
     var block = this.model.unblock();
     block.fail(function() {
       Diaspora.page.flashMessages.render({
@@ -119,10 +119,7 @@ app.pages.Profile = app.views.Base.extend({
 
   reload: function() {
     this.$('#profile').addClass('loading');
-
-    this.asyncSubHeader = $.Deferred();
-    $.when(this.model.fetch(), this.asyncSubHeader)
-      .done(_.bind(this._done, this));
+    this.model.fetch();
   },
 
   _done: function() {
@@ -130,4 +127,3 @@ app.pages.Profile = app.views.Base.extend({
   }
 });
 // @license-end
-

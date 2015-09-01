@@ -126,6 +126,10 @@ When /^I post a status with the text "([^\"]*)"$/ do |text|
   @me.post(:status_message, :text => text, :public => true, :to => 'all')
 end
 
+When /^I post a limited status with the text "([^\"]*)"$/ do |text|
+  @me.post(:status_message, :text => text, :public => false, :to => @me.aspect_ids)
+end
+
 And /^I follow the "([^\"]*)" link from the last sent email$/ do |link_text|
   email_text = Devise.mailer.deliveries.first.body.to_s
   email_text = Devise.mailer.deliveries.first.html_part.body.raw_source if email_text.blank?
@@ -202,7 +206,7 @@ Given /^I visit alice's invitation code url$/ do
   visit invite_code_path(invite_code)
 end
 
-When /^I fill in the new user form$/ do
+When /^I fill in the new user form/ do
   fill_in_new_user_form
 end
 
@@ -210,4 +214,8 @@ And /^I should be able to friend Alice$/ do
   alice = User.find_by_username 'alice'
   step 'I should see "Add contact"'
   step "I should see \"#{alice.name}\""
+end
+
+When /^I click the sign in button$/ do
+  click_link "Sign in"
 end

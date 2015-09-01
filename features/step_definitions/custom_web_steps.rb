@@ -88,10 +88,18 @@ And /^I hover over the "([^"]+)"$/ do |element|
 end
 
 When /^I prepare the deletion of the first post$/ do
-  within(find('.stream .stream_element')) do
-    ctrl = find('.controls')
+  within(find(".stream .stream_element", match: :first)) do
+    ctrl = find(".control-icons")
     ctrl.hover
-    ctrl.find('.remove_post').click
+    ctrl.find(".remove_post").click
+  end
+end
+
+When /^I prepare hiding the first post$/ do
+  within(find(".stream .stream_element", match: :first)) do
+    ctrl = find(".control-icons")
+    ctrl.hover
+    ctrl.find(".hide_post").click
   end
 end
 
@@ -100,10 +108,14 @@ When /^I click to delete the first post$/ do
   step "I confirm the alert"
 end
 
+When /^I click to hide the first post$/ do
+  step "I prepare hiding the first post"
+  step "I confirm the alert"
+end
+
 When /^I click to delete the first comment$/ do
   within("div.comment", match: :first) do
-    find(".controls").hover
-    find(".comment_delete", visible: false).click # TODO: hax to check what's failing on Travis
+    find(".comment_delete", visible: false).click
   end
 end
 
@@ -126,12 +138,6 @@ end
 
 And /^I reject the alert$/ do
   page.driver.browser.switch_to.alert.dismiss
-end
-
-When /^(.*) in the modal window$/ do |action|
-  within('#facebox') do
-    step action
-  end
 end
 
 When /^(.*) in the mention modal$/ do |action|
@@ -175,7 +181,7 @@ end
 When /^I search for "([^\"]*)"$/ do |search_term|
   fill_in "q", :with => search_term
   find_field("q").native.send_key(:enter)
-  find("#tags_show .span3")
+  have_content(search_term)
 end
 
 Then /^the "([^"]*)" field(?: within "([^"]*)")? should be filled with "([^"]*)"$/ do |field, selector, value|
@@ -208,7 +214,7 @@ end
 
 
 Then /^the notification dropdown should be visible$/ do
-  find(:css, "#notification_dropdown").should be_visible
+  expect(find(:css, "#notification-dropdown")).to be_visible
 end
 
 Then /^the notification dropdown scrollbar should be visible$/ do
@@ -216,7 +222,7 @@ Then /^the notification dropdown scrollbar should be visible$/ do
 end
 
 Then /^there should be (\d+) notifications loaded$/ do |n|
-  result = page.evaluate_script("$('.notification_element').length")
+  result = page.evaluate_script("$('.media.stream_element').length")
   result.should == n.to_i
 end
 
@@ -243,8 +249,12 @@ And "I wait for the popovers to appear" do
 end
 
 And /^I click close on all the popovers$/ do
+  page.execute_script("$('.popover .close')[0].click();")
+  expect(page).to have_selector(".popover", count: 2)
+  page.execute_script("$('.popover .close')[0].click();")
+  expect(page).to have_selector(".popover", count: 1)
   page.execute_script("$('.popover .close').click();")
-  page.should_not have_selector(".popover .close")
+  expect(page).to_not have_selector(".popover .close")
 end
 
 Then /^I should see a flash message indicating success$/ do
@@ -253,6 +263,10 @@ end
 
 Then /^I should see a flash message indicating failure$/ do
   flash_message_failure?.should be true
+end
+
+Then /^I should not see a flash message indicating failure$/ do
+  expect { flash_message_failure?.should }.to raise_error(Capybara::ElementNotFound)
 end
 
 Then /^I should see a flash message with a warning$/ do

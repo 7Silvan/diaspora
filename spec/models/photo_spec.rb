@@ -45,8 +45,7 @@ describe Photo, :type => :model do
   describe '#diaspora_initialize' do
     before do
       @image = File.open(@fixture_name)
-      @photo = Photo.diaspora_initialize(
-                :author => @user.person, :user_file => @image)
+      @photo = Photo.diaspora_initialize(author: @user.person, user_file: @image)
     end
 
     it 'sets the persons diaspora handle' do
@@ -115,6 +114,7 @@ describe Photo, :type => :model do
         @photo.unprocessed_image.store! File.open(@fixture_name)
       end
     end
+
     it 'should have text' do
       @photo.text= "cool story, bro"
       expect(@photo.save).to be true
@@ -137,6 +137,45 @@ describe Photo, :type => :model do
     it 'should save the image dimensions' do
       expect(@photo.width).to eq(40)
       expect(@photo.height).to eq(40)
+    end
+  end
+
+  context 'with a saved photo containing EXIF data' do
+
+    let(:base_path) { File.dirname(__FILE__) }
+    let(:public_path) { File.join(base_path, "../../public/") }
+    let(:photo_with_exif) { File.open(File.join(base_path, "..", "fixtures", "exif.jpg")) }
+
+    after do
+      FileUtils.rm_r Dir.glob(File.join(public_path, "uploads/images/*"))
+    end
+
+    it "should preserve EXIF data in according to user preference" do
+      image = image_from a_photo_sent_by(alice)
+
+      expect(image.exif.length).not_to eq(0)
+    end
+
+    it "should not preserve EXIF in according to user preference" do
+      image = image_from a_photo_sent_by(bob)
+
+      expect(image.exif.length).to eq(0)
+    end
+
+    def a_photo_sent_by(user)
+      photo = user.build_post(:photo, user_file: photo_with_exif, to: @aspect.id)
+
+      with_carrierwave_processing do
+        photo.unprocessed_image.store! photo_with_exif
+        photo.save
+      end
+
+      photo
+    end
+
+    def image_from(photo)
+      photo_path = File.join(public_path, photo.unprocessed_image.store_dir, photo.unprocessed_image.filename)
+      MiniMagick::Image.new(photo_path)
     end
   end
 
@@ -180,7 +219,6 @@ describe Photo, :type => :model do
     end
 
     it 'should set the remote_photo on marshalling' do
-      #security hax
       user2 = FactoryGirl.create(:user)
       aspect2 = user2.aspects.create(:name => "foobars")
       connect_users(@user, @aspect, user2, aspect2)
@@ -243,6 +281,21 @@ describe Photo, :type => :model do
         @photo2.status_message.reload
         @photo2.destroy
       }.to_not change(StatusMessage, :count)
+    end
+  end
+
+  describe "#receive_public" do
+    it "updates the photo if it is already persisted" do
+      allow(@photo).to receive(:persisted_shareable).and_return(@photo2)
+      expect(@photo2).to receive(:update_attributes)
+      @photo.receive_public
+    end
+
+    it "does not update the photo if the author mismatches" do
+      @photo.author = bob.person
+      allow(@photo).to receive(:persisted_shareable).and_return(@photo2)
+      expect(@photo).not_to receive(:update_existing_sharable)
+      @photo.receive_public
     end
   end
 end

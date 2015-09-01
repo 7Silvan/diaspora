@@ -15,6 +15,7 @@ class User < ActiveRecord::Base
   scope :daily_actives, ->(time = Time.now) { logged_in_since(time - 1.day) }
   scope :yearly_actives, ->(time = Time.now) { logged_in_since(time - 1.year) }
   scope :halfyear_actives, ->(time = Time.now) { logged_in_since(time - 6.month) }
+  scope :active, -> { joins(:person).where(people: {closed_account: false}).where.not(username: nil) }
 
   devise :token_authenticatable, :database_authenticatable, :registerable,
          :recoverable, :rememberable, :trackable, :validatable,
@@ -22,12 +23,14 @@ class User < ActiveRecord::Base
 
   before_validation :strip_and_downcase_username
   before_validation :set_current_language, :on => :create
+  before_validation :set_default_color_theme, on: :create
 
   validates :username, :presence => true, :uniqueness => true
   validates_format_of :username, :with => /\A[A-Za-z0-9_]+\z/
   validates_length_of :username, :maximum => 32
   validates_exclusion_of :username, :in => AppConfig.settings.username_blacklist
   validates_inclusion_of :language, :in => AVAILABLE_LANGUAGE_CODES
+  validates :color_theme, inclusion: {in: AVAILABLE_COLOR_THEME_CODES}, allow_blank: true
   validates_format_of :unconfirmed_email, :with  => Devise.email_regexp, :allow_blank => true
 
   validates_presence_of :person, :unless => proc {|user| user.invitation_token.present?}
@@ -40,7 +43,7 @@ class User < ActiveRecord::Base
   has_one :profile, through: :person
 
   delegate :guid, :public_key, :posts, :photos, :owns?, :image_url,
-           :diaspora_handle, :name, :public_url, :profile, :url,
+           :diaspora_handle, :name, :atom_url, :profile_url, :profile, :url,
            :first_name, :last_name, :gender, :participations, to: :person
   delegate :id, :guid, to: :person, prefix: true
 
@@ -66,8 +69,8 @@ class User < ActiveRecord::Base
   has_many :blocks
   has_many :ignored_people, :through => :blocks, :source => :person
 
-  has_many :conversation_visibilities, -> { order 'updated_at DESC' }, through: :person
-  has_many :conversations, -> { order 'updated_at DESC' }, through: :conversation_visibilities
+  has_many :conversation_visibilities, through: :person
+  has_many :conversations, through: :conversation_visibilities
 
   has_many :notifications, :foreign_key => :recipient_id
 
@@ -197,6 +200,10 @@ class User < ActiveRecord::Base
     self.language = I18n.locale.to_s if self.language.blank?
   end
 
+  def set_default_color_theme
+    self.color_theme ||= AppConfig.settings.default_color_theme
+  end
+
   # This override allows a user to enter either their email address or their username into the username field.
   # @return [User] The user that matches the username/email condition.
   # @return [nil] if no user matches that condition.
@@ -231,7 +238,7 @@ class User < ActiveRecord::Base
   end
 
   def dispatch_post(post, opts={})
-    FEDERATION_LOGGER.info("user:#{self.id} dispatching #{post.class}:#{post.guid}")
+    logger.info "user:#{id} dispatching #{post.class}:#{post.guid}"
     Postzord::Dispatcher.defer_build_and_post(self, post, opts)
   end
 
@@ -291,6 +298,67 @@ class User < ActiveRecord::Base
     end
   end
 
+  ######### Data export ##################
+  mount_uploader :export, ExportedUser
+
+  def queue_export
+    update exporting: true
+    Workers::ExportUser.perform_async(id)
+  end
+
+  def perform_export!
+    export = Tempfile.new([username, '.json.gz'], encoding: 'ascii-8bit')
+    export.write(compressed_export) && export.close
+    if export.present?
+      update exporting: false, export: export, exported_at: Time.zone.now
+    else
+      update exporting: false
+    end
+  end
+
+  def compressed_export
+    ActiveSupport::Gzip.compress Diaspora::Exporter.new(self).execute
+  end
+
+  ######### Photos export ##################
+  mount_uploader :exported_photos_file, ExportedPhotos
+
+  def queue_export_photos
+    update exporting_photos: true
+    Workers::ExportPhotos.perform_async(id)
+  end
+
+  def perform_export_photos!
+    temp_zip = Tempfile.new([username, '_photos.zip'])
+    begin
+      Zip::OutputStream.open(temp_zip.path) do |zos|
+        photos.each do |photo|
+          begin
+            photo_file = photo.unprocessed_image.file
+            if photo_file
+              photo_data = photo_file.read
+              zos.put_next_entry(photo.remote_photo_name)
+              zos.print(photo_data)
+            else
+              logger.info "Export photos error: No file for #{photo.remote_photo_name} not found"
+            end
+          rescue Errno::ENOENT
+            logger.info "Export photos error: #{photo.unprocessed_image.file.path} not found"
+          end
+        end
+      end
+    ensure
+      temp_zip.close
+    end
+
+    begin
+      update exported_photos_file: temp_zip, exported_photos_at: Time.zone.now if temp_zip.present?
+    ensure
+      restore_attributes if invalid? || temp_zip.present?
+      update exporting_photos: false
+    end
+  end
+
   ######### Mailer #######################
   def mail(job, *args)
     pref = job.to_s.gsub('Workers::Mail::', '').underscore
@@ -299,10 +367,9 @@ class User < ActiveRecord::Base
     end
   end
 
-  def mail_confirm_email
-    return false if unconfirmed_email.blank?
+  def send_confirm_email
+    return if unconfirmed_email.blank?
     Workers::Mail::ConfirmEmail.perform_async(id)
-    true
   end
 
   ######### Posts and Such ###############
@@ -315,10 +382,10 @@ class User < ActiveRecord::Base
       retraction = Retraction.for(target)
     end
 
-   if target.is_a?(Post)
-     opts[:additional_subscribers] = target.resharers
-     opts[:services] = self.services
-   end
+    if target.is_a?(Post)
+      opts[:additional_subscribers] = target.resharers
+      opts[:services] = services
+    end
 
     mailman = Postzord::Dispatcher.build(self, retraction, opts)
     mailman.post
@@ -367,6 +434,8 @@ class User < ActiveRecord::Base
     self.email = opts[:email]
     self.language = opts[:language]
     self.language ||= I18n.locale.to_s
+    self.color_theme = opts[:color_theme]
+    self.color_theme ||= AppConfig.settings.default_color_theme
     self.valid?
     errors = self.errors
     errors.delete :person
@@ -393,10 +462,23 @@ class User < ActiveRecord::Base
     aq = self.aspects.create(:name => I18n.t('aspects.seed.acquaintances'))
 
     if AppConfig.settings.autofollow_on_join?
-      default_account = Webfinger.new(AppConfig.settings.autofollow_on_join_user).fetch
+      default_account = Person.find_or_fetch_by_identifier(AppConfig.settings.autofollow_on_join_user)
       self.share_with(default_account, aq) if default_account
     end
     aq
+  end
+
+  def send_welcome_message
+    return unless AppConfig.settings.welcome_message.enabled? && AppConfig.admins.account?
+    sender_username = AppConfig.admins.account.get
+    sender = User.find_by(username: sender_username)
+    conversation = sender.build_conversation(
+      participant_ids: [sender.person.id, person.id],
+      subject:         AppConfig.settings.welcome_message.subject.get,
+      message:         {text: AppConfig.settings.welcome_message.text.get % {username: username}})
+    if conversation.save
+      Postzord::Dispatcher.build(sender, conversation).post
+    end
   end
 
   def encryption_key
@@ -405,6 +487,10 @@ class User < ActiveRecord::Base
 
   def admin?
     Role.is_admin?(self.person)
+  end
+
+  def podmin_account?
+    username == AppConfig.admins.account
   end
 
   def mine?(target)
@@ -458,15 +544,20 @@ class User < ActiveRecord::Base
     AccountDeletion.create(:person => self.person)
   end
 
+  def closed_account?
+    self.person.closed_account
+  end
+
   def clear_account!
     clearable_fields.each do |field|
       self[field] = nil
     end
     [:getting_started,
-     :disable_mail,
      :show_community_spotlight_in_stream].each do |field|
       self[field] = false
     end
+    self[:disable_mail] = true
+    self[:strip_exif] = true
     self[:email] = "deletedaccount_#{self[:id]}@example.org"
 
     random_password = SecureRandom.hex(20)
@@ -490,7 +581,7 @@ class User < ActiveRecord::Base
       self.save
     end
   end
-  
+
   def after_database_authentication
     # remove any possible remove_after timestamp flag set by maintenance.remove_old_users
     unless self.remove_after.nil?
@@ -500,11 +591,14 @@ class User < ActiveRecord::Base
   end
 
   private
+
   def clearable_fields
     self.attributes.keys - ["id", "username", "encrypted_password",
                             "created_at", "updated_at", "locked_at",
                             "serialized_private_key", "getting_started",
                             "disable_mail", "show_community_spotlight_in_stream",
-                            "email", "remove_after"]
+                            "strip_exif", "email", "remove_after",
+                            "export", "exporting", "exported_at",
+                            "exported_photos_file", "exporting_photos", "exported_photos_at"]
   end
 end

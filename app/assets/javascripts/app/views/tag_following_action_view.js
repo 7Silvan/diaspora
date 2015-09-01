@@ -20,7 +20,7 @@ app.views.TagFollowingAction = app.views.Base.extend({
     return _.extend(this.defaultPresenter(), {
       tag_is_followed : this.tag_is_followed(),
       followString : this.followString()
-    })
+    });
   },
 
   followString : function() {
@@ -35,7 +35,7 @@ app.views.TagFollowingAction = app.views.Base.extend({
     return !this.model.isNew();
   },
 
-  getTagFollowing : function(tagFollowing) {
+  getTagFollowing : function() {
     this.model = app.tagFollowings.where({"name":this.tagText})[0] ||
         new app.models.TagFollowing({"name":this.tagText});
     this.model.bind("change", this.render, this);
@@ -43,12 +43,12 @@ app.views.TagFollowingAction = app.views.Base.extend({
   },
 
   mouseIn : function(){
-    this.$("input").removeClass("green").addClass("btn-danger");
+    this.$("input").removeClass("btn-success").addClass("btn-danger");
     this.$("input").val( Diaspora.I18n.t('stream.tags.stop_following', {tag: this.model.attributes.name} ) );
   },
 
   mouseOut : function() {
-    this.$("input").removeClass("btn-danger").addClass("green");
+    this.$("input").removeClass("btn-danger").addClass("btn-success");
     this.$("input").val( Diaspora.I18n.t('stream.tags.following', {"tag" : this.model.attributes.name} ) );
   },
 
@@ -63,4 +63,3 @@ app.views.TagFollowingAction = app.views.Base.extend({
   }
 });
 // @license-end
-

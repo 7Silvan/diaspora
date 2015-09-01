@@ -22,7 +22,7 @@ module Workers
         # and queue accounts for closing to sidekiq
         # for those who have not signed in, skip warning and queue removal
         # in +1 days
-        users.find_each do |user|
+        users.each do |user|
           if user.sign_in_count > 0
             remove_at = Time.now + AppConfig.settings.maintenance.remove_old_users.warn_days.to_i.days
           else
@@ -31,7 +31,7 @@ module Workers
           user.flag_for_removal(remove_at)
           if user.sign_in_count > 0
             # send a warning
-            Maintenance.account_removal_warning(user).deliver
+            Maintenance.account_removal_warning(user).deliver_now
           end
           Workers::RemoveOldUser.perform_in(remove_at+1.day, user.id)
         end

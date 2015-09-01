@@ -82,6 +82,16 @@ describe PhotosController, :type => :controller do
       expect(response).to be_success
     end
 
+    it "succeeds on mobile devices without any available pictures" do
+      get :index, format: :mobile, person_id: FactoryGirl.create(:person).guid.to_s
+      expect(response).to be_success
+    end
+
+    it "succeeds on mobile devices with available pictures" do
+      get :index, format: :mobile, person_id: bob.person.guid.to_s
+      expect(response).to be_success
+    end
+
     it "displays the logged in user's pictures" do
       get :index, :person_id => alice.person.guid.to_s
       expect(assigns[:person]).to eq(alice.person)
@@ -94,12 +104,23 @@ describe PhotosController, :type => :controller do
       expect(assigns[:posts]).to eq([@bobs_photo])
     end
 
+    it "displays the correct number of photos" do
+      16.times do |i|
+        eve.post(:photo, :user_file => uploaded_photo, :to => eve.aspects.first.id, :public => true)
+      end
+      get :index, :person_id => eve.person.to_param
+      expect(response.body).to include '"photos":{"count":16}'
+
+      eve.post(:photo, :user_file => uploaded_photo, :to => eve.aspects.first.id, :public => false)
+      get :index, :person_id => eve.person.to_param
+      expect(response.body).to include '"photos":{"count":16}' # eve is not sharing with alice
+    end
+
     it "returns json when requested" do
       request.env['HTTP_ACCEPT'] = 'application/json'
       get :index, :person_id => alice.person.guid.to_s
 
       expect(response.headers['Content-Type']).to match 'application/json.*'
-      save_fixture(response.body, "photos_json")
     end
 
     it 'displays by date of creation' do

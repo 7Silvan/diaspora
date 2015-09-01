@@ -3,6 +3,7 @@
 #   the COPYRIGHT file.
 
 class ApplicationController < ActionController::Base
+  before_action :force_tablet_html
   has_mobile_fu
   protect_from_forgery :except => :receive
 
@@ -12,6 +13,7 @@ class ApplicationController < ActionController::Base
   before_action :set_grammatical_gender
   before_action :mobile_switch
   before_action :gon_set_current_user
+  before_action :gon_set_appconfig
   before_action :gon_set_preloads
 
   inflection_method :grammatical_gender => :gender
@@ -24,7 +26,7 @@ class ApplicationController < ActionController::Base
                 :tags,
                 :open_publisher
 
-  layout ->(c) { request.format == :mobile ? "application" : "centered_with_header_with_footer" }
+  layout proc { request.format == :mobile ? "application" : "with_header_with_footer" }
 
   private
 
@@ -38,13 +40,7 @@ class ApplicationController < ActionController::Base
 
   # Overwriting the sign_out redirect path method
   def after_sign_out_path_for(resource_or_scope)
-    # mobile_fu's is_mobile_device? wasn't working here for some reason...
-    # it may have been just because of the test env.
-    if request.env['HTTP_USER_AGENT'].try(:match, /mobile/i)
-      root_path
-    else
-      new_user_session_path
-    end
+    is_mobile_device? ? root_path : new_user_session_path
   end
 
   def all_aspects
@@ -124,10 +120,11 @@ class ApplicationController < ActionController::Base
   def mobile_switch
     if session[:mobile_view] == true && request.format.html?
       request.format = :mobile
-    elsif request.format.tablet?
-      # we currently don't have any special tablet views...
-      request.format = :html
     end
+  end
+
+  def force_tablet_html
+    session[:tablet_view] = false
   end
 
   def after_sign_in_path_for(resource)
@@ -142,6 +139,13 @@ class ApplicationController < ActionController::Base
     current_user.getting_started? ? getting_started_path : stream_path
   end
 
+  def gon_set_appconfig
+    gon.push(appConfig: {
+               chat:     {enabled: AppConfig.chat.enabled?},
+               settings: {podname: AppConfig.settings.pod_name}
+             })
+  end
+
   def gon_set_current_user
     return unless user_signed_in?
     a_ids = session[:a_ids] || []
@@ -152,12 +156,5 @@ class ApplicationController < ActionController::Base
   def gon_set_preloads
     return unless gon.preloads.nil?
     gon.preloads = {}
-  end
-
-  def self.use_bootstrap_for *routes
-    before_filter -> {
-      @css_framework = :bootstrap
-      gon.bootstrap = true
-    }, only: routes.flatten
   end
 end

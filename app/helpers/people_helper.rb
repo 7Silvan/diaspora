@@ -32,7 +32,9 @@ module PeopleHelper
   end
 
   def person_image_tag(person, size = :thumb_small)
-    image_tag(person.profile.image_url(size), :alt => person.name, :class => 'avatar', :title => person.name, 'data-person_id' => person.id)
+    return "" if person.nil? || person.profile.nil?
+    image_tag(person.profile.image_url(size), alt: person.name, class: "avatar img-responsive center-block",
+              title: person.name, "data-person_id" => person.id)
   end
 
   def person_image_link(person, opts={})
@@ -48,10 +50,6 @@ module PeopleHelper
       #{person_image_tag(person, opts[:size])}
       </a>".html_safe
     end
-  end
-
-  def person_href(person, opts={})
-    "href=\"#{local_or_remote_person_path(person, opts)}\"".html_safe
   end
 
   # Rails.application.routes.url_helpers is needed since this is indirectly called from a model

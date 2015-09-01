@@ -26,10 +26,10 @@ module PublishingCukeHelpers
   end
 
   def submit_publisher
-    txt = find('#publisher #status_message_fake_text').value
-    find('#publisher .creation').click
+    txt = find("#publisher #status_message_fake_text").value
+    find("#publisher .btn-primary").click
     # wait for the content to appear
-    expect(find('#main_stream')).to have_content(txt)
+    expect(find("#main_stream")).to have_content(txt)
   end
 
   def click_and_post(text)
@@ -45,7 +45,7 @@ module PublishingCukeHelpers
   end
 
   def publisher_submittable?
-    submit_btn = find("#publisher input[type=submit]")
+    submit_btn = find("#publisher button#submit")
     !submit_btn[:disabled]
   end
 
@@ -88,15 +88,21 @@ module PublishingCukeHelpers
     find(".stream_element", text: text)
   end
 
-  def like_post(post_text)
-    within_post(post_text) do
-      click_link 'Like'
-    end
-  end
-
   def within_post(post_text)
     within find_post_by_text(post_text) do
       yield
+    end
+  end
+
+  def like_stream_post(post_text)
+    within_post(post_text) do
+      find(:css, 'a.like').click
+    end
+  end
+
+  def like_show_page_post
+    within("#single-post-actions") do
+      find(:css, 'a.like').click
     end
   end
 

@@ -18,7 +18,7 @@ class Reshare < Post
   end
 
   after_commit :on => :create do
-    self.root.update_reshares_counter
+    self.root.update_reshares_counter if self.root.present?
   end
 
   after_destroy do
@@ -26,7 +26,7 @@ class Reshare < Post
   end
 
   def root_diaspora_id
-    self.root.author.diaspora_handle
+    root.try(:author).try(:diaspora_handle)
   end
 
   delegate :o_embed_cache, :open_graph_cache,
@@ -47,6 +47,10 @@ class Reshare < Post
 
   def address
     absolute_root.try(:location).try(:address)
+  end
+
+  def poll
+    absolute_root.try(:poll) || super
   end
 
   def receive(recipient, sender)

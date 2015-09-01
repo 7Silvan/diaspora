@@ -30,8 +30,8 @@ app.views.CommentStream = app.views.Base.extend({
     this.model.comments.each(this.appendComment, this);
 
     // add autoexpanders to new comment textarea
-    this.$("textarea").autoResize({'extraSpace' : 10});
-    this.$('textarea').val(this.textareaValue);
+    this.$("textarea").val(this.textareaValue);
+    autosize(this.$("textarea"));
   },
 
   presenter: function(){
@@ -39,12 +39,12 @@ app.views.CommentStream = app.views.Base.extend({
       moreCommentsCount : (this.model.interactions.commentsCount() - 3),
       showExpandCommentsLink : (this.model.interactions.commentsCount() > 3),
       commentsCount : this.model.interactions.commentsCount()
-    })
+    });
   },
 
   createComment: function(evt) {
     if(evt){ evt.preventDefault(); }
-    
+
     var commentText = $.trim(this.$('.comment_box').val());
     this.$(".comment_box").val("");
     this.$(".comment_box").css("height", "");
@@ -57,23 +57,23 @@ app.views.CommentStream = app.views.Base.extend({
   },
 
   keyDownOnCommentBox: function(evt) {
-    if(evt.keyCode == 13 && evt.ctrlKey) {
-      this.$("form").submit()
+    if(evt.keyCode === 13 && evt.ctrlKey) {
+      this.$("form").submit();
       return false;
     }
   },
-  
+
   appendComment: function(comment) {
     // Set the post as the comment's parent, so we can check
     // on post ownership in the Comment view.
-    comment.set({parent : this.model.toJSON()})
+    comment.set({parent : this.model.toJSON()});
 
     this.$(".comments").append(new app.views.Comment({
       model: comment
     }).render().el);
   },
 
-  commentTextareaFocused: function(evt){
+  commentTextareaFocused: function(){
     this.$("form").removeClass('hidden').addClass("open");
   },
 
@@ -83,20 +83,18 @@ app.views.CommentStream = app.views.Base.extend({
 
   expandComments: function(evt){
     if(evt){ evt.preventDefault(); }
-
-    self = this;
+    var self = this;
 
     this.model.comments.fetch({
       success : function(resp){
         self.model.set({
           comments : resp.models,
           all_comments_loaded : true
-        })
+        });
 
-        self.model.trigger("commentsExpanded", self)
+        self.model.trigger("commentsExpanded", self);
       }
     });
   }
 });
 // @license-end
-

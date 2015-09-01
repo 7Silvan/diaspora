@@ -1,7 +1,3 @@
-@import '../colors';
-@import '../mixins';
-@import 'new_mixins';
-
 .poll_form {
   border-top: 1px solid $border-grey;
   border-bottom: 1px solid $border-grey;
@@ -19,22 +15,24 @@
     margin-bottom: 0px;
   }
 
+  .result-row > label { width: 100%; }
+
   .progress {
     background-image: none;
-    @include box-shadow(0, 0, 0);
+    box-shadow: 0 0 0;
     margin-bottom: 5px;
     height: 10px !important;
 
     .bar {
-      background-image: none;
-      background-color: $border-dark-grey;
+      background: $border-dark-grey none;
       color: $text-dark-grey;
       text-align: left;
+      height: 100%;
     }
   }
   .submit[disabled] {
     cursor: default;
-    color: $light-grey;
+    color: $text-grey;
 
     &:hover, &:active {
       background-image: none;

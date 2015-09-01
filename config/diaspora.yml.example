@@ -138,11 +138,34 @@ configuration: ## Section
     ## You probably don't want to uncomment or change this.
     #pubsub_server: 'https://pubsubhubbub.appspot.com/'
 
+    ## Logger configuration
+    logging: ## Section
+
+      logrotate: ## Section
+
+        ## Roll the application log on a daily basis (default=true).
+        #enable: true
+
+        ## The number of days to keep (default=7)
+        #days: 7
+
+      ## Debug logging
+      debug: ## Section
+
+        ## Enables the debug-logging for SQL (default=false)
+        ## This logs every SQL-statement!
+        #sql: true
+
+        ## Enables the federation-debug-log (default=false)
+        ## This logs all XMLs that are used for the federation
+        #federation: true
+
   ## Settings affecting how ./script/server behaves.
   server: ## Section
-
-    ## The port on which the appserver should listen (default=3000).
-    #port: 3000
+    ## Where the appserver should listen to (default=unix:tmp/diaspora.sock)
+    #listen: 'unix:tmp/diaspora.sock'
+    #listen: 'unix:/run/diaspora/diaspora.sock'
+    #listen: '127.0.0.1:3000'
 
     ## Rails environment (default='development').
     ## The environment in which the server should be started by default.
@@ -381,11 +404,31 @@ configuration: ## Section
     ## follow an account upon creation.
     #autofollow_on_join: true
 
-    ## Auto-follow account (default='diasporahq@joindiaspora.com')
+    ## Auto-follow account (default='hq@pod.diaspora.software')
     ## The diaspora* HQ account keeps users up to date with news about Diaspora.
     ## If you set another auto-follow account (for example your podmin account),
     ## please consider resharing diaspora* HQ's posts for your pod's users!
-    #autofollow_on_join_user: 'diasporahq@joindiaspora.com'
+    #autofollow_on_join_user: 'hq@pod.diaspora.software'
+
+    ## Welcome Message settings
+    welcome_message: ##Section
+
+      ## Welcome Message on registration (default=false)
+      ## Send a message to new users after registration
+      ## to tell them about your pod and how things
+      ## are handled on it.
+      #enabled: false
+
+      ## Welcome Message subject (default='Welcome Message')
+      ## The subject of the conversation that is started
+      ## by your welcome message.
+      #subject: "Welcome Message"
+
+      ## Welcome Message text (default='Hello %{username}, welcome to diaspora.')
+      ## The content of your welcome message.
+      ## The placeholder "%{username}" will be replaced by the username
+      ## of the new user.
+      #text: "Hello %{username}, welcome to diaspora."
 
     ## Invitation settings
     invitations: ## Section
@@ -399,11 +442,22 @@ configuration: ## Section
       ## invitations on your pod.
       #count: 25
 
-    ## Paypal donations
-    ## You can provide the ID of a hosted Paypal button here to allow your users
-    ## to send donations to help run their pod. If you leave this out your users
-    ## will see a button to donate to the Diaspora Foundation instead :)
-    #paypal_hosted_button_id: "change_me"
+    ## Paypal donations (disabled by default)
+    ## You can set details for a Paypal button here to allow donations
+    ## towards running the pod.
+    ## First, enable the function, then set the currency in which you
+    ## wish to receive donations, and **either** a hosted button id
+    ## **or** an encrypted key for an unhosted button.
+    paypal_donations: ## Section
+      #enable: false
+
+      ## Currency used (USD, EUR...)
+      #currency: USD
+
+      ## hosted Paypal button id
+      #paypal_hosted_button_id: "change_me"
+      ## OR encrypted key of unhosted button
+      #paypal_unhosted_button_encrypted: "-----BEGIN PKCS7-----"
 
     ## Bitcoin donations
     ## You can provide a bitcoin address here to allow your users to provide
@@ -510,6 +564,13 @@ configuration: ## Section
     ## If not set your pod will provide a downloadable archive.
     #source_url: 'https://example.org/username/diaspora'
 
+    ## Default color theme
+    ## You can change which color theme is displayed when a user is not signed in
+    ## or has not selected any color theme from the available ones. You simply have
+    ## to enter the name of the theme's folder in "app/assets/stylesheets/color_themes/".
+    ## ("original" for the theme in "app/assets/stylesheets/color_themes/original/", for
+    ## example).
+    #default_color_theme: "original"
   ## Posting from Diaspora to external services (all are disabled by default).
   services: ## Section
 
@@ -519,6 +580,13 @@ configuration: ## Section
       #enable: true
       #app_id: 'abcdef'
       #secret: 'change_me'
+
+      ## This setting is required to define whether the Facebook app has permissions to post
+      ##   false == No permissions (default)
+      ##   true == Permissions for all users to post. App MUST have 'publish_actions' approved by Facebook!
+      ##   "username" == Set to local username to allow a single user to cross-post. The person who has created
+      ##                 the Facebook app will always be able to cross-post, even without 'publish_actions'.
+      #authorized: false
 
     ## OAuth credentials for Twitter
     twitter: ## Section
@@ -610,6 +678,38 @@ configuration: ## Section
 
     ## E-mail address to contact the administrator.
     #podmin_email: 'podmin@example.org'
+
+  ## Settings related to relays
+  relay: ## Section
+
+    ## Relays are applications that exist to push public posts around to
+    ## pods which want to subscribe to them but would not otherwise
+    ## receive them due to not having direct contact with the remote pods.
+    ##
+    ## See more regarding relays: https://wiki.diasporafoundation.org/Relay_servers_for_public_posts
+
+    outbound: ## Section
+      ## Enable this setting to send out public posts from this pod to a relay
+      #send: false
+      ## Change default remote relay handle used for sending out here
+      #handle: 'relay@relay.iliketoast.net'
+
+    inbound: ## Section
+      ## Enable this to receive public posts from relays
+      #subscribe: false
+
+      ## Scope is either 'all' or 'tags' (default).
+      ## - 'all', means this pod wants to receive all public posts from a relay
+      ## - 'tags', means this pod wants only posts tagged with certain tags
+      #scope: tags
+
+      ## If scope is 'tags', should we include tags that users on this pod follow?
+      ## These are added in addition to 'pod_tags', if set.
+      #include_user_tags: false
+
+      ## If scope is 'tags', a comma separated list of tags here can be set.
+      ## For example "linux,diaspora", to receive posts related to these tags
+      #pod_tags:
 
 ## Here you can override settings defined above if you need
 ## to have them different in different environments.

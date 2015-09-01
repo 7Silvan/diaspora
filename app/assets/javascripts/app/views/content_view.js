@@ -7,22 +7,23 @@ app.views.Content = app.views.Base.extend({
 
   presenter : function(){
     return _.extend(this.defaultPresenter(), {
-      text : app.helpers.textFormatter(this.model.get("text"), this.model),
+      text : app.helpers.textFormatter(this.model.get("text"), this.model.get("mentioned_people")),
       largePhoto : this.largePhoto(),
       smallPhotos : this.smallPhotos(),
-      location: this.location()
+      location: this.location(),
+      isReshare : this.model.get("post_type") === "Reshare"
     });
   },
 
 
   largePhoto : function() {
-    var photos = this.model.get("photos")
-    if(!photos || photos.length == 0) { return }
-    return photos[0]
+    var photos = this.model.get("photos");
+    if(!photos || photos.length === 0) { return }
+    return photos[0];
   },
 
   smallPhotos : function() {
-    var photos = this.model.get("photos")
+    var photos = this.model.get("photos");
     if(!photos || photos.length < 2) { return }
     photos.splice(0, 1); // remove first photo as it is already shown as largePhoto
     return photos;
@@ -49,10 +50,10 @@ app.views.Content = app.views.Base.extend({
       , oembed = elem.find(".oembed")
       , opengraph = elem.find(".opengraph")
       , addHeight = 0;
-    if($.trim(oembed.html()) != "") {
+    if($.trim(oembed.html()) !== "") {
       addHeight += oembed.height();
     }
-    if($.trim(opengraph.html()) != "") {
+    if($.trim(opengraph.html()) !== "") {
       addHeight += opengraph.height();
     }
 
@@ -71,7 +72,11 @@ app.views.Content = app.views.Base.extend({
   },
 
   postRenderTemplate : function(){
-    _.defer(_.bind(this.collapseOversized, this))
+    _.defer(_.bind(this.collapseOversized, this));
+    var photoAttachments = this.$(".photo_attachments");
+    if(photoAttachments.length > 0) {
+      new app.views.Gallery({ el: photoAttachments });
+    }
   }
 });
 
@@ -81,6 +86,10 @@ app.views.StatusMessage = app.views.Content.extend({
 
 app.views.ExpandedStatusMessage = app.views.StatusMessage.extend({
   postRenderTemplate : function(){
+    var photoAttachments = this.$(".photo_attachments");
+    if(photoAttachments.length > 0) {
+      new app.views.Gallery({ el: photoAttachments });
+    }
   }
 });
 
@@ -95,22 +104,32 @@ app.views.OEmbed = app.views.Base.extend({
   },
 
   presenter:function () {
-    o_embed_cache = this.model.get("o_embed_cache")
+    var o_embed_cache = this.model.get("o_embed_cache");
     if(o_embed_cache) {
-      typemodel = { rich: false, photo: false, video: false, link: false }
-      typemodel[o_embed_cache.data.type] = true
-      o_embed_cache.data.types = typemodel
+      var typemodel = { rich: false, photo: false, video: false, link: false };
+      typemodel[o_embed_cache.data.type] = true;
+      o_embed_cache.data.types = typemodel;
     }
     return _.extend(this.defaultPresenter(), {
       o_embed_html : app.helpers.oEmbed.html(o_embed_cache)
-    })
+    });
   },
 
   showOembedContent : function (evt) {
     if( $(evt.target).is('a') ) return;
+    var clickedThumb = false;
+    if ($(evt.target).hasClass(".thumb")) {
+      clickedThumb = $(evt.target);
+    } else {
+      clickedThumb = $(evt.target).parent(".thumb");
+    }
     var insertHTML = $(app.helpers.oEmbed.html(this.model.get("o_embed_cache")));
     var paramSeparator = ( /\?/.test(insertHTML.attr("src")) ) ? "&" : "?";
     insertHTML.attr("src", insertHTML.attr("src") + paramSeparator + "autoplay=1&wmode=opaque");
+    if (clickedThumb) {
+      insertHTML.attr("width", clickedThumb.width());
+      insertHTML.attr("height", clickedThumb.height());
+    }
     this.$el.html(insertHTML);
   }
 });
@@ -137,4 +156,3 @@ app.views.SPVOpenGraph = app.views.OpenGraph.extend({
   }
 });
 // @license-end
-

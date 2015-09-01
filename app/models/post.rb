@@ -11,8 +11,7 @@ class Post < ActiveRecord::Base
   include Diaspora::Commentable
   include Diaspora::Shareable
 
-
-  has_many :participations, :dependent => :delete_all, :as => :target
+  has_many :participations, dependent: :delete_all, as: :target, inverse_of: :target
 
   attr_accessor :user_like
 
@@ -27,6 +26,8 @@ class Post < ActiveRecord::Base
   belongs_to :open_graph_cache
 
   validates_uniqueness_of :id
+
+  validates :author, presence: true
 
   after_create do
     self.touch(:interacted_at)
@@ -51,14 +52,6 @@ class Post < ActiveRecord::Base
   scope :liked_by, ->(person) {
     joins(:likes).where(:likes => {:author_id => person.id})
   }
-
-  def self.newer(post)
-    where("posts.created_at > ?", post.created_at).reorder('posts.created_at ASC').first
-  end
-
-  def self.older(post)
-    where("posts.created_at < ?", post.created_at).reorder('posts.created_at DESC').first
-  end
 
   def self.visible_from_author(author, current_user=nil)
     if current_user.present?
@@ -155,17 +148,20 @@ class Post < ActiveRecord::Base
     self.author.profile.nsfw?
   end
 
-  def self.find_by_guid_or_id_with_user(id, user=nil)
-    key = id.to_s.length <= 8 ? :id : :guid
-    post = if user
-             user.find_visible_shareable_by_id(Post, id, :key => key)
-           else
-             Post.where(key => id).includes(:author, :comments => :author).first
-           end
+  def self.find_public(id)
+    where(post_key(id) => id).includes(:author, comments: :author).first.tap do |post|
+      raise ActiveRecord::RecordNotFound.new("could not find a post with id #{id}") unless post
+      raise Diaspora::NonPublic unless post.public?
+    end
+  end
 
-    # is that a private post?
-    raise(Diaspora::NonPublic) unless user || post.try(:public?)
+  def self.find_non_public_by_guid_or_id_with_user(id, user)
+    user.find_visible_shareable_by_id(Post, id, key: post_key(id)).tap do |post|
+      raise ActiveRecord::RecordNotFound.new("could not find a post with id #{id}") unless post
+    end
+  end
 
-    post || raise(ActiveRecord::RecordNotFound.new("could not find a post with id #{id}"))
+  def self.post_key(id)
+    id.to_s.length <= 8 ? :id : :guid
   end
 end

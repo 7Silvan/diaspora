@@ -87,11 +87,18 @@ describe NotificationsController, :type => :controller do
 
         expect(Nokogiri(response.body).css('.aspect_membership')).to be_empty
       end
+
       it "should provide a contacts menu for start sharing notifications" do
         eve.share_with(alice.person, eve.aspects.first)
         get :index, "per_page" => 5
 
         expect(Nokogiri(response.body).css('.aspect_membership')).not_to be_empty
+      end
+
+      it 'succeeds on mobile' do
+        eve.share_with(alice.person, eve.aspects.first)
+        get :index, :format => :mobile
+        expect(response).to be_success
       end
     end
 
@@ -108,6 +115,24 @@ describe NotificationsController, :type => :controller do
         FactoryGirl.create(:notification, :recipient => alice, :target => @post)
         get :index, "show" => "unread"
         expect(assigns[:notifications].count).to eq(1)
+      end
+    end
+
+    context "after deleting a person" do
+      before do
+        user = FactoryGirl.create(:user_with_aspect)
+        user.share_with(alice.person, user.aspects.first)
+        user.person.delete
+      end
+
+      it "succeeds" do
+        get :index
+        expect(response).to be_success
+      end
+
+      it "succeeds on mobile" do
+        get :index, format: :mobile
+        expect(response).to be_success
       end
     end
   end

@@ -6,30 +6,38 @@ app.views.AspectsList = app.views.Base.extend({
   el: '#aspects_list',
 
   events: {
-    'click .toggle_selector' : 'toggleAll'
+    "click .toggle_selector" : "toggleAll"
+  },
+
+  subviews : {
+    "#newAspectContainer" : "aspectCreateView"
   },
 
   initialize: function() {
-    this.collection.on('change', this.toggleSelector, this);
-    this.collection.on('change', this.updateStreamTitle, this);
-    this.collection.on('aspectStreamFetched', this.updateAspectList, this);
+    this.collection.on("change", this.toggleSelector, this);
+    this.collection.on("change", this.updateStreamTitle, this);
+    this.collection.on("aspectStreamFetched", this.updateAspectList, this);
+    app.events.on("aspect:create", function(id) { window.location = "/contacts?a_id=" + id });
+  },
+
+  aspectCreateView: function() {
+    return new app.views.AspectCreate();
   },
 
   postRenderTemplate: function() {
     this.collection.each(this.appendAspect, this);
-    this.$('a[rel*=facebox]').facebox();
     this.updateStreamTitle();
     this.toggleSelector();
   },
 
   appendAspect: function(aspect) {
-    $("#aspects_list > *:last").before(new app.views.Aspect({
+    $("#aspects_list > .hoverable:last").before(new app.views.Aspect({
       model: aspect, attributes: {'data-aspect_id': aspect.get('id')}
     }).render().el);
   },
 
   toggleAll: function(evt) {
-    if (evt) { evt.preventDefault(); };
+    if (evt) { evt.preventDefault(); }
 
     if (this.collection.allSelected()) {
       this.collection.deselectAll();
@@ -56,18 +64,17 @@ app.views.AspectsList = app.views.Base.extend({
 
   updateAspectList: function() {
     this.collection.each(function(aspect) {
-      var element = this.$("li[data-aspect_id="+aspect.get('id')+"]");
-      if (aspect.get('selected')) {
-        element.find('.icons-check_yes_ok').addClass('selected');
+      var element = this.$("li[data-aspect_id="+aspect.get("id")+"]");
+      if (aspect.get("selected")) {
+        element.find(".entypo-check").addClass("selected");
       } else {
-        element.find('.icons-check_yes_ok').removeClass('selected');
+        element.find(".entypo-check").removeClass("selected");
       }
     });
   },
 
   hideAspectsList: function() {
     this.$el.empty();
-  },
-})
+  }
+});
 // @license-end
-

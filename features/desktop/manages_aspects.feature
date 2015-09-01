@@ -8,16 +8,16 @@ Feature: User manages contacts
     Given I am signed in
     And I am on the contacts page
     And I follow "+ Add an aspect"
-    And I fill in "Name" with "Dorm Mates" in the modal window
-    And I press "Create" in the modal window
+    And I fill in "aspect_name" with "Dorm Mates" in the aspect creation modal
+    And I click on selector ".btn-primary" in the aspect creation modal
     Then I should see "Dorm Mates" within "#aspect_nav"
 
   Scenario: creating an aspect from homepage
     Given I am signed in
     And I go to the aspects page
     When I follow "Add an aspect"
-    And I fill in "Name" with "losers" in the modal window
-    And I press "Create" in the modal window
+    And I fill in "aspect_name" with "losers" in the aspect creation modal
+    And I click on selector ".btn-primary" in the aspect creation modal
     Then I should see "losers" within "#aspect_nav"
 
   Scenario: deleting an aspect from contacts index
@@ -59,23 +59,29 @@ Feature: User manages contacts
     And I follow "Cat People"
     And I click on selector "#change_aspect_name"
     And I fill in "aspect_name" with "Unicorn People"
-    And I press "update"
+    And I press "Update"
     Then I should see "Unicorn People" within "#aspect_name"
 
   Scenario: clicking on the contacts link in the header with zero contacts directs a user to the featured users page
     Given I am signed in
     And I have 0 contacts
-    And I am on the home page
-
     And I click on my name in the header
     When I follow "Contacts"
-    Then I should see "Community Spotlight" within ".span9"
+    Then I should see "Community spotlight" within ".col-md-9"
 
   Scenario: clicking on the contacts link in the header with contacts does not send a user to the featured users page
     Given I am signed in
     And I have 2 contacts
-    And I am on the home page
-
     And I click on my name in the header
     When I follow "Contacts"
-    Then I should not see "Community Spotlight" within ".span9"
+    Then I should not see "Community spotlight" within ".col-md-9"
+
+  Scenario: sorting the aspects
+    Given I am signed in
+    And I have an aspect called "People"
+    And I have an aspect called "Cat People"
+    When I am on the contacts page
+    And I drag "Cat People" up
+    And I go to the contacts page
+    Then I should see "Cat People" as 2. aspect
+    And I should see "People" as 3. aspect
